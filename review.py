@@ -5,12 +5,12 @@ import json
 from datetime import datetime
 import subprocess
 
-def generate_review_payload(projects_with_notes, area_name):
+def generate_review_payload(projects_with_notes, area_id):
     payload = {
         'type': 'project',
         'attributes': {
-            'title': f'🎥 Review {area_name.capitalize()} - Week {current_week_number}',
-            'area-id': '9nNDw4EjbzdPhQkKshBeAZ',
+            'title': f'🎥 Review - Week {current_week_number}',
+            'area-id': area_id,
             'items': [
                 {
                     'type': 'to-do',
@@ -30,12 +30,13 @@ if __name__ == "__main__":
     parser.add_argument("area", choices=['work', 'private', 'test'], help="Specify the area for which to generate the review")
     args = parser.parse_args()
 
-    # Replace with your actual tags
+    # Replace with your actual tags and area ID
     tag_mapping = {
         'work': '🛠 Arbeit',
         'private': '💪 Ich',
         'test': 'TestTag'
     }
+    area_id = 'FyjHXYqSHPDqthkHWJVJuJ'  # Replace with your desired area ID
 
     if args.area not in tag_mapping:
         print("Invalid area specified.")
@@ -55,7 +56,7 @@ if __name__ == "__main__":
                 'uuid': project['uuid']
             })
 
-    things_payload = generate_review_payload(projects_with_notes, args.area)
+    things_payload = generate_review_payload(projects_with_notes, area_id)
     things_json = json.dumps(things_payload)
     things_json_encoded = urllib.parse.quote(things_json)
     things_url = f'things:///json?data={things_json_encoded}'
