@@ -3,22 +3,7 @@ import argparse
 import urllib.parse
 import json
 from datetime import datetime
-
-def get_projects_with_notes(areas):
-    projects_with_notes = []
-
-    for area in areas:
-        projects = area['items']
-        for project in projects:
-            notes = ""
-            for task in project['items']:
-                notes += f"[Link](things:///show?id={task['uuid']})\n"
-            projects_with_notes.append({
-                'title': project['title'],
-                'notes': notes
-            })
-
-    return projects_with_notes
+import subprocess
 
 def generate_review_payload(projects_with_notes, area_name):
     payload = {
@@ -31,7 +16,7 @@ def generate_review_payload(projects_with_notes, area_name):
                     'type': 'to-do',
                     'attributes': {
                         'title': project['title'],
-                        'notes': project['notes']
+                        'notes': f"[Link](things:///show?id={project['uuid']})"
                     }
                 }
                 for project in projects_with_notes
@@ -60,12 +45,19 @@ if __name__ == "__main__":
     areas = things.areas(tag=area_tag, include_items=True)
 
     current_week_number = datetime.now().isocalendar()[1]
-    projects_with_notes = get_projects_with_notes(areas)
+    
+    projects_with_notes = []
+    for area in areas:
+        projects = area['items']
+        for project in projects:
+            projects_with_notes.append({
+                'title': project['title'],
+                'uuid': project['uuid']
+            })
 
     things_payload = generate_review_payload(projects_with_notes, args.area)
     things_json = json.dumps(things_payload)
     things_json_encoded = urllib.parse.quote(things_json)
     things_url = f'things:///json?data={things_json_encoded}'
 
-    print("Generated Things3 Review URL:")
-    print(things_url)
+    subprocess.run(['open', things_url])
