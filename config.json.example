@@ -1,0 +1,13 @@
+{
+    "areas": {
+        "work": {
+            "tag": "🛠 Work",
+            "area_id": "YourWorkAreaID"
+        },
+        "private": {
+            "tag": "💪 Private",
+            "area_id": "YourPrivateAreaID"
+        }
+    },
+    "available_areas": ["work", "private"]
+}
