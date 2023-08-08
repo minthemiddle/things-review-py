@@ -20,48 +20,52 @@ def get_projects_with_notes(areas):
 
     return projects_with_notes
 
+def generate_review_payload(projects_with_notes, area_name):
+    payload = {
+        'type': 'project',
+        'attributes': {
+            'title': f'🎥 Review {area_name.capitalize()} - Week {current_week_number}',
+            'area-id': '9nNDw4EjbzdPhQkKshBeAZ',
+            'items': [
+                {
+                    'type': 'to-do',
+                    'attributes': {
+                        'title': project['title'],
+                        'notes': project['notes']
+                    }
+                }
+                for project in projects_with_notes
+            ]
+        }
+    }
+    return [payload]
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("area", choices=['work', 'private', 'test'], help="Specify the area for which to generate the review")
     args = parser.parse_args()
 
     # Replace with your actual tags
-    work_tag = '🛠 Arbeit'
-    private_tag = '💪 Ich'
-    test_tag = 'TestTag'
+    tag_mapping = {
+        'work': '🛠 Arbeit',
+        'private': '💪 Ich',
+        'test': 'TestTag'
+    }
 
-    if args.area == 'work':
-        areas = things.areas(tag=work_tag, include_items=True)
-    elif args.area == 'private':
-        areas = things.areas(tag=private_tag, include_items=True)
-    elif args.area == 'test':
-        areas = things.areas(tag=test_tag, include_items=True)
+    if args.area not in tag_mapping:
+        print("Invalid area specified.")
+        exit()
 
-    projects_with_notes = get_projects_with_notes(areas)
+    area_tag = tag_mapping[args.area]
+    areas = things.areas(tag=area_tag, include_items=True)
 
     current_week_number = datetime.now().isocalendar()[1]
-    review_title = f"🎥 Review {args.area.capitalize()} - Week {current_week_number}"
+    projects_with_notes = get_projects_with_notes(areas)
 
-    payload = []
-    for project in projects_with_notes:
-        payload.append({
-            'type': 'project',
-            'attributes': {
-                'title': project['title'],
-                'items': [
-                    {
-                        'type': 'to-do',
-                        'attributes': {
-                            'title': project['notes']
-                        }
-                    }
-                ]
-            }
-        })
-
-    things_json = json.dumps(payload)
+    things_payload = generate_review_payload(projects_with_notes, args.area)
+    things_json = json.dumps(things_payload)
     things_json_encoded = urllib.parse.quote(things_json)
     things_url = f'things:///json?data={things_json_encoded}'
-    
+
     print("Generated Things3 Review URL:")
     print(things_url)
