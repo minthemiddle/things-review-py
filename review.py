@@ -27,22 +27,19 @@ def generate_review_payload(projects_with_notes, area_id):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("area", choices=['work', 'private', 'test'], help="Specify the area for which to generate the review")
+    
+    with open('config.json', 'r') as config_file:
+        config = json.load(config_file)
+        
+        available_areas = config['available_areas']
+        parser.add_argument("area", choices=available_areas, help="Specify the area for which to generate the review")
+    
     args = parser.parse_args()
 
-    # Replace with your actual tags and area ID
-    tag_mapping = {
-        'work': '🛠 Arbeit',
-        'private': '💪 Ich',
-        'test': 'TestTag'
-    }
-    area_id = 'FyjHXYqSHPDqthkHWJVJuJ'  # Replace with your desired area ID
+    area_info = config['areas'][args.area]
+    area_tag = area_info['tag']
+    area_id = area_info['area_id']
 
-    if args.area not in tag_mapping:
-        print("Invalid area specified.")
-        exit()
-
-    area_tag = tag_mapping[args.area]
     areas = things.areas(tag=area_tag, include_items=True)
 
     current_week_number = datetime.now().isocalendar()[1]
