@@ -29,11 +29,15 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     
     with open('config.json', 'r') as config_file:
-        config = json.load(config_file)
-        
-        available_areas = config['available_areas']
-        parser.add_argument("area", choices=available_areas, help="Specify the area for which to generate the review")
-    
+       config = json.load(config_file)
+       
+       # Get the keys from the 'areas' dictionary
+       available_areas = config['areas'].keys()
+       # Convert the keys to a list
+       available_areas = list(available_areas)
+       
+       parser.add_argument("area", choices=available_areas, help="Specify the area for which to generate the review")
+   
     args = parser.parse_args()
 
     area_info = config['areas'][args.area]
