@@ -25,3 +25,7 @@ Review is saved in a specified area.
     }
 }
 ```
+
+## Example review project
+
+![](screenshot.jpg)
