@@ -40,7 +40,7 @@ def generate_review_payload(projects_with_notes, area_id):
     payload = {
         'type': 'project',
         'attributes': {
-            'title': f'🎥 Review - Week {current_week_number}',
+            'title': f'🎥 Review - {current_year}-cw{current_week_number:02d}',
             'area-id': area_id,
             'items': [
                 {
@@ -105,7 +105,7 @@ if __name__ == "__main__":
     except Exception as e:
         raise ThingsAPIError(f"Error communicating with Things API: {str(e)}")
 
-    current_week_number = datetime.now().isocalendar()[1]
+    current_year, current_week_number, _ = datetime.now().isocalendar()
     
     # Collect all projects with their deadlines
     all_projects = []
