@@ -17,10 +17,10 @@ Review is saved in a specified area.
 
 ```json
 {
-    "areas": {
+    "reviews": {
         "work": { // name of review
-            "tag": "🛠 Work", // all areas with this tag will be included
-            "area_id": "YourWorkAreaID" // ID of area where the review will be saved
+            "search_tag": "🛠 Work", // tag to find tasks to review
+            "save_area": "YourWorkAreaID" // where to save the review
         }
     }
 }

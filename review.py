@@ -69,25 +69,25 @@ if __name__ == "__main__":
             except json.JSONDecodeError as e:
                 raise InvalidConfigError(f"Invalid JSON in config file: {str(e)}")
             
-            if 'areas' not in config:
-                raise InvalidConfigError("Missing 'areas' key in config")
+            if 'reviews' not in config:
+                raise InvalidConfigError("Missing 'reviews' key in config")
                 
-            available_areas = list(config['areas'].keys())
+            available_reviews = list(config['reviews'].keys())
             
             if not available_areas:
                 raise InvalidConfigError("No areas defined in config")
                 
-            parser.add_argument("area", choices=available_areas, 
+            parser.add_argument("area", choices=available_reviews, 
                               help="Specify the area for which to generate the review")
             
         args = parser.parse_args()
 
-        if args.area not in config['areas']:
-            raise AreaNotFoundError(f"Area '{args.area}' not found in config")
+        if args.area not in config['reviews']:
+            raise AreaNotFoundError(f"Review configuration '{args.area}' not found in config")
             
-        area_info = config['areas'][args.area]
-        area_tag = area_info['tag']
-        area_id = area_info['area_id']
+        review_config = config['reviews'][args.area]
+        search_tag = review_config['search_tag']
+        save_area = review_config['save_area']
         
     except ConfigError as e:
         print(f"Configuration error: {str(e)}", file=sys.stderr)
@@ -97,9 +97,9 @@ if __name__ == "__main__":
         sys.exit(1)
 
     try:
-        areas = things.areas(tag=area_tag, include_items=True)
+        areas = things.areas(tag=search_tag, include_items=True)
         if not areas:
-            raise ThingsAPIError(f"No areas found with tag '{area_tag}'")
+            raise ThingsAPIError(f"No areas found with tag '{search_tag}'")
     except Exception as e:
         raise ThingsAPIError(f"Error communicating with Things API: {str(e)}")
 
@@ -114,7 +114,7 @@ if __name__ == "__main__":
                 'uuid': project['uuid']
             })
 
-    things_payload = generate_review_payload(projects_with_notes, area_id)
+    things_payload = generate_review_payload(projects_with_notes, save_area)
     things_json = json.dumps(things_payload)
     things_json_encoded = urllib.parse.quote(things_json)
     things_url = f'things:///json?data={things_json_encoded}'
