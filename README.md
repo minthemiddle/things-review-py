@@ -71,7 +71,15 @@ This will:
 2. Create a new review project in your specified `save_area`
 3. Include links to all the original projects
 
-### 5. Deactivate Virtual Environment
+### 5. Title Format Placeholders
+
+The review title can be customized using these placeholders in the title_format:
+
+- `{year}`: Two-digit year (e.g., 25)
+- `{cw:02d}`: Calendar week with leading zero (e.g., 05)
+- `{n}`: Will show "n" when using -n flag, empty otherwise
+
+### 6. Deactivate Virtual Environment
 When you're done, deactivate the virtual environment:
 ```bash
 deactivate
