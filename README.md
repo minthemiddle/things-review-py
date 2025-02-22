@@ -1,15 +1,15 @@
 # Things Review
 
 To create getting things done style reviews of your active Things3 projects.
-Review is done for all areas that have the same tag (`$TAG`).
-Review is saved in a specified area.
+Review is done for projects from all areas that have the same tag (`$TAG`).
+Review is saved as project in a specified area.
 
 ## Installation and Usage
 
 ### 1. Clone the Repository
 Clone this repository to your local machine:
 ```bash
-git clone https://github.com/yourusername/things-review.git
+git clone https://github.com/minthemiddle/things-review-py.git
 cd things-review
 ```
 
@@ -63,7 +63,7 @@ python review.py work
 ```
 
 This will:
-1. Find all projects tagged with your configured `search_tag`
+1. Find all projects within an area tagged with your configured `search_tag`
 2. Create a new review project in your specified `save_area`
 3. Include links to all the original projects
 
