@@ -96,10 +96,16 @@ deactivate
 {
     "title_format": "🎥 Review - {year}-cw{cw:02d}{n}",
     "reviews": {
-        "work": { // name of review
-            "search_tag": "🛠 Work", // tag to find tasks to review
-            "save_area": "YourWorkAreaID" // where to save the review
+        "work": { 
+            "search_tag": "🛠 Work",
+            "save_area": "YourWorkAreaID"
         }
     }
 }
 ```
+
+Where:
+
+- `work`: name of review
+- `search_tag`: tag to find tasks to review
+- `save_area`: where to save the review
