@@ -79,6 +79,8 @@ if __name__ == "__main__":
                 
             parser.add_argument("area", choices=available_reviews, 
                               help="Specify the area for which to generate the review")
+            parser.add_argument("-n", "--number", type=int,
+                             help="Limit the number of projects to review")
             
         args = parser.parse_args()
 
@@ -109,10 +111,14 @@ if __name__ == "__main__":
     for area in areas:
         projects = area['items']
         for project in projects:
+            if args.number and len(projects_with_notes) >= args.number:
+                break
             projects_with_notes.append({
                 'title': project['title'],
                 'uuid': project['uuid']
             })
+        if args.number and len(projects_with_notes) >= args.number:
+            break
 
     things_payload = generate_review_payload(projects_with_notes, save_area)
     things_json = json.dumps(things_payload)

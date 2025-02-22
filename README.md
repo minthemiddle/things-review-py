@@ -54,12 +54,16 @@ cp config.json.example config.json
 ### 4. Running a Review
 To generate a review for a specific tag:
 ```bash
-python review.py TAG_NAME
+python review.py TAG_NAME [-n NUMBER]
 ```
 
-Example for a work review:
+Examples:
 ```bash
+# Review all work projects
 python review.py work
+
+# Review only 5 work projects
+python review.py work -n 5
 ```
 
 This will:
