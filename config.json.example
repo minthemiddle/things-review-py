@@ -1,14 +1,13 @@
 {
+    "title_format": "🎥 Review - {year}-cw{cw:02d}",
     "reviews": {
         "work": {
             "search_tag": "🛠 Work",
-            "save_area": "YourWorkAreaID",
-            "title_format": "🎥 Review - {year}-cw{cw:02d}"
+            "save_area": "YourWorkAreaID"
         },
         "private": {
             "search_tag": "💪 Private",
-            "save_area": "YourPrivateAreaID",
-            "title_format": "Review - KW{year}-{cw}"
+            "save_area": "YourPrivateAreaID"
         }
     }
 }

@@ -89,8 +89,7 @@ deactivate
     "reviews": {
         "work": { // name of review
             "search_tag": "🛠 Work", // tag to find tasks to review
-            "save_area": "YourWorkAreaID", // where to save the review
-            "title_format": "🎥 Review - {year}-cw{cw:02d}" // format for review title
+            "save_area": "YourWorkAreaID" // where to save the review
         }
     }
 }
