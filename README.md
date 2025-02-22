@@ -86,7 +86,7 @@ deactivate
 
 ```json
 {
-    "title_format": "🎥 Review - {year}-cw{cw:02d}",
+    "title_format": "🎥 Review - {year}-cw{cw:02d}{n}",
     "reviews": {
         "work": { // name of review
             "search_tag": "🛠 Work", // tag to find tasks to review

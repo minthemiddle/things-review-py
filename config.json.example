@@ -1,5 +1,5 @@
 {
-    "title_format": "🎥 Review - {year}-cw{cw:02d}",
+    "title_format": "🎥 Review - {year}-cw{cw:02d}{n}",
     "reviews": {
         "work": {
             "search_tag": "🛠 Work",
