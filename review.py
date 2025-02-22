@@ -40,7 +40,10 @@ def generate_review_payload(projects_with_notes, area_id):
     payload = {
         'type': 'project',
         'attributes': {
-            'title': f'🎥 Review - {str(current_year)[2:]}-cw{current_week_number:02d}',
+            'title': review_config.get('title_format', '🎥 Review - {year}-cw{cw:02d}').format(
+                year=str(current_year)[2:],
+                cw=current_week_number
+            ),
             'area-id': area_id,
             'items': [
                 {
