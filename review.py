@@ -121,11 +121,22 @@ if __name__ == "__main__":
                 'deadline': project.get('deadline')  # None if no deadline
             })
     
-    # Sort projects: those with deadlines first (soonest first), then those without
+    import random
+    
+    # Sort projects: those with deadlines first (soonest first)
     all_projects.sort(key=lambda p: (p['deadline'] is None, p['deadline']))
     
-    # Apply limit if specified
-    projects_with_notes = all_projects[:args.number] if args.number else all_projects
+    # Split into projects with and without deadlines
+    with_deadlines = [p for p in all_projects if p['deadline'] is not None]
+    without_deadlines = [p for p in all_projects if p['deadline'] is None]
+    
+    # Randomize projects without deadlines when using -n
+    if args.number:
+        random.shuffle(without_deadlines)
+    
+    # Combine lists and apply limit if specified
+    combined_projects = with_deadlines + without_deadlines
+    projects_with_notes = combined_projects[:args.number] if args.number else combined_projects
     
     # Remove deadline from final payload since we don't need it
     projects_with_notes = [{
