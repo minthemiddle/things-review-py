@@ -1,8 +1,8 @@
 {
     "reviews": {
         "work": {
-            "search_tag": "🛠 Work",  // Tag to find tasks to review
-            "save_area": "YourWorkAreaID"  // Where to save the review
+            "search_tag": "🛠 Work",
+            "save_area": "YourWorkAreaID"
         },
         "private": {
             "search_tag": "💪 Private",
