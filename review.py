@@ -107,18 +107,28 @@ if __name__ == "__main__":
 
     current_week_number = datetime.now().isocalendar()[1]
     
-    projects_with_notes = []
+    # Collect all projects with their deadlines
+    all_projects = []
     for area in areas:
         projects = area['items']
         for project in projects:
-            if args.number and len(projects_with_notes) >= args.number:
-                break
-            projects_with_notes.append({
+            all_projects.append({
                 'title': project['title'],
-                'uuid': project['uuid']
+                'uuid': project['uuid'],
+                'deadline': project.get('deadline')  # None if no deadline
             })
-        if args.number and len(projects_with_notes) >= args.number:
-            break
+    
+    # Sort projects: those with deadlines first (soonest first), then those without
+    all_projects.sort(key=lambda p: (p['deadline'] is None, p['deadline']))
+    
+    # Apply limit if specified
+    projects_with_notes = all_projects[:args.number] if args.number else all_projects
+    
+    # Remove deadline from final payload since we don't need it
+    projects_with_notes = [{
+        'title': p['title'],
+        'uuid': p['uuid']
+    } for p in projects_with_notes]
 
     things_payload = generate_review_payload(projects_with_notes, save_area)
     things_json = json.dumps(things_payload)
