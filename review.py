@@ -74,8 +74,8 @@ if __name__ == "__main__":
                 
             available_reviews = list(config['reviews'].keys())
             
-            if not available_areas:
-                raise InvalidConfigError("No areas defined in config")
+            if not available_reviews:
+                raise InvalidConfigError("No reviews defined in config")
                 
             parser.add_argument("area", choices=available_reviews, 
                               help="Specify the area for which to generate the review")
