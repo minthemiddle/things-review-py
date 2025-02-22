@@ -4,8 +4,39 @@ import urllib.parse
 import json
 from datetime import datetime
 import subprocess
+import sys
+import os
+
+class ConfigError(Exception):
+    """Base class for configuration errors"""
+    pass
+
+class MissingConfigError(ConfigError):
+    """Raised when config file is missing"""
+    pass
+
+class InvalidConfigError(ConfigError):
+    """Raised when config file is invalid"""
+    pass
+
+class AreaNotFoundError(Exception):
+    """Raised when specified area is not found in config"""
+    pass
+
+class ThingsAPIError(Exception):
+    """Raised when there's an error communicating with Things API"""
+    pass
 
 def generate_review_payload(projects_with_notes, area_id):
+    """Generate the Things3 API payload for creating a review project.
+    
+    Args:
+        projects_with_notes (list): List of project dictionaries containing 'title' and 'uuid'
+        area_id (str): The Things3 area ID where the review should be created
+        
+    Returns:
+        list: A list containing the Things3 API payload structure
+    """
     payload = {
         'type': 'project',
         'attributes': {
@@ -28,23 +59,49 @@ def generate_review_payload(projects_with_notes, area_id):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     
-    with open('config.json', 'r') as config_file:
-       config = json.load(config_file)
-       
-       # Get the keys from the 'areas' dictionary
-       available_areas = config['areas'].keys()
-       # Convert the keys to a list
-       available_areas = list(available_areas)
-       
-       parser.add_argument("area", choices=available_areas, help="Specify the area for which to generate the review")
-   
-    args = parser.parse_args()
+    try:
+        if not os.path.exists('config.json'):
+            raise MissingConfigError("config.json file not found")
+            
+        with open('config.json', 'r') as config_file:
+            try:
+                config = json.load(config_file)
+            except json.JSONDecodeError as e:
+                raise InvalidConfigError(f"Invalid JSON in config file: {str(e)}")
+            
+            if 'areas' not in config:
+                raise InvalidConfigError("Missing 'areas' key in config")
+                
+            available_areas = list(config['areas'].keys())
+            
+            if not available_areas:
+                raise InvalidConfigError("No areas defined in config")
+                
+            parser.add_argument("area", choices=available_areas, 
+                              help="Specify the area for which to generate the review")
+            
+        args = parser.parse_args()
 
-    area_info = config['areas'][args.area]
-    area_tag = area_info['tag']
-    area_id = area_info['area_id']
+        if args.area not in config['areas']:
+            raise AreaNotFoundError(f"Area '{args.area}' not found in config")
+            
+        area_info = config['areas'][args.area]
+        area_tag = area_info['tag']
+        area_id = area_info['area_id']
+        
+    except ConfigError as e:
+        print(f"Configuration error: {str(e)}", file=sys.stderr)
+        sys.exit(1)
+    except AreaNotFoundError as e:
+        print(f"Area error: {str(e)}", file=sys.stderr)
+        sys.exit(1)
 
-    areas = things.areas(tag=area_tag, include_items=True)
+    try:
+        areas = things.areas(tag=area_tag, include_items=True)
+        if not areas:
+            raise ThingsAPIError(f"No areas found with tag '{area_tag}'")
+    except Exception as e:
+        raise ThingsAPIError(f"Error communicating with Things API: {str(e)}")
 
     current_week_number = datetime.now().isocalendar()[1]
     
