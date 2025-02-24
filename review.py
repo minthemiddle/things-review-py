@@ -9,6 +9,29 @@ import os
 import logging
 from typing import List, Dict, Optional
 
+STATE_FILE = "review_state.json"
+
+def load_review_state(state_file: str = STATE_FILE) -> Dict[str, str]:
+    """
+    Load the review state mapping project UUIDs to last-reviewed timestamps.
+    Returns an empty dict if the file does not exist or is invalid.
+    """
+    if not os.path.exists(state_file):
+        return {}
+    with open(state_file, "r") as f:
+        try:
+            state = json.load(f)
+        except json.JSONDecodeError:
+            state = {}
+    return state
+
+def save_review_state(state: Dict[str, str], state_file: str = STATE_FILE) -> None:
+    """
+    Save the review state mapping project UUIDs to last-reviewed timestamps.
+    """
+    with open(state_file, "w") as f:
+        json.dump(state, f)
+
 class ConfigError(Exception):
     """Base class for configuration errors"""
     pass
@@ -70,11 +93,11 @@ def fetch_areas(search_tag: str) -> list:
     except Exception as e:
         raise ThingsAPIError(f"Error communicating with Things API: {str(e)}")
 
-def process_projects(areas: list, limit: Optional[int]) -> List[Dict[str, str]]:
+def process_projects(areas: list, limit: Optional[int], review_state: Dict[str, str]) -> List[Dict[str, str]]:
     """
-    Process projects from areas, sorting by deadline and applying a limit if provided.
+    Process projects from areas, sorting by when they were last reviewed and deadline.
+    Projects that have not been reviewed recently come first.
     """
-    import random
     from datetime import datetime
     all_projects = []
     for area in areas:
@@ -87,18 +110,22 @@ def process_projects(areas: list, limit: Optional[int]) -> List[Dict[str, str]]:
                     deadline_parsed = None
             else:
                 deadline_parsed = None
+            last_review_str = review_state.get(project['uuid'])
+            if last_review_str:
+                try:
+                    last_reviewed = datetime.fromisoformat(last_review_str)
+                except ValueError:
+                    last_reviewed = datetime.min
+            else:
+                last_reviewed = datetime.min
             all_projects.append({
                 'title': project['title'],
                 'uuid': project['uuid'],
-                'deadline': deadline_parsed
+                'deadline': deadline_parsed,
+                'last_reviewed': last_reviewed
             })
-    all_projects.sort(key=lambda p: (p['deadline'] is None, p['deadline']))
-    with_deadlines = [p for p in all_projects if p['deadline'] is not None]
-    without_deadlines = [p for p in all_projects if p['deadline'] is None]
-    if limit:
-        random.shuffle(without_deadlines)
-    combined_projects = with_deadlines + without_deadlines
-    selected = combined_projects[:limit] if limit else combined_projects
+    all_projects.sort(key=lambda p: (p['last_reviewed'], p['deadline'] if p['deadline'] is not None else datetime.max))
+    selected = all_projects[:limit] if limit else all_projects
     return [{'title': p['title'], 'uuid': p['uuid']} for p in selected]
 
 def generate_review_payload(projects_with_notes: list, area_id: str, title: str) -> list:
@@ -152,6 +179,7 @@ def main() -> None:
     except ThingsAPIError as e:
         logging.error(str(e))
         sys.exit(1)
+    review_state = load_review_state()
 
     current_year, current_week_number, _ = datetime.now().isocalendar()
     formatted_title = review_config.get('title_format', '🎥 Review - {year}-cw{cw:02d}{n}').format(
@@ -159,13 +187,31 @@ def main() -> None:
         cw=current_week_number,
         n=f"{args.number}" if args.number else ""
     )
-    projects_with_notes = process_projects(areas, args.number)
+    projects_with_notes = process_projects(areas, args.number, review_state)
     things_payload = generate_review_payload(projects_with_notes, save_area, formatted_title)
     things_json = json.dumps(things_payload)
     things_json_encoded = urllib.parse.quote(things_json)
     things_url = f'things:///json?data={things_json_encoded}'
     import webbrowser
     webbrowser.open(things_url)
+    print("Review project created! Please confirm which projects you actually reviewed:")
+    for idx, project in enumerate(projects_with_notes, start=1):
+        print(f"{idx}. {project['title']} (UUID: {project['uuid']})")
+    reviewed_input = input("Enter project numbers separated by comma (e.g. 1,3,4) or press Enter to skip: ")
+    reviewed_projects = []
+    if reviewed_input.strip():
+        try:
+            indices = [int(s.strip()) for s in reviewed_input.split(',')]
+            for index in indices:
+                if 1 <= index <= len(projects_with_notes):
+                    reviewed_projects.append(projects_with_notes[index - 1])
+        except ValueError:
+            print("Invalid input, no projects will be marked as reviewed.")
+    from datetime import datetime
+    current_iso = datetime.now().isoformat()
+    for project in reviewed_projects:
+        review_state[project['uuid']] = current_iso
+    save_review_state(review_state)
 
 if __name__ == "__main__":
     main()
