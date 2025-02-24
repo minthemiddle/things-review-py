@@ -98,7 +98,6 @@ def process_projects(areas: list, limit: Optional[int], review_state: Dict[str, 
     Process projects from areas, sorting by when they were last reviewed and deadline.
     Projects that have not been reviewed recently come first.
     """
-    from datetime import datetime
     all_projects = []
     for area in areas:
         for project in area.get('items', []):
