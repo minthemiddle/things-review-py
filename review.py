@@ -193,7 +193,6 @@ def main() -> None:
     things_url = f'things:///json?data={things_json_encoded}'
     import webbrowser
     webbrowser.open(things_url)
-    from datetime import datetime
     current_iso = datetime.now().isoformat()
     old_states = {}
     for project in projects_with_notes:
