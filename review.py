@@ -207,7 +207,6 @@ def main() -> None:
                     reviewed_projects.append(projects_with_notes[index - 1])
         except ValueError:
             print("Invalid input, no projects will be marked as reviewed.")
-    from datetime import datetime
     current_iso = datetime.now().isoformat()
     for project in reviewed_projects:
         review_state[project['uuid']] = current_iso
