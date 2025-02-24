@@ -194,22 +194,31 @@ def main() -> None:
     things_url = f'things:///json?data={things_json_encoded}'
     import webbrowser
     webbrowser.open(things_url)
-    print("Review project created! Please confirm which projects you actually reviewed:")
+    from datetime import datetime
+    current_iso = datetime.now().isoformat()
+    old_states = {}
+    for project in projects_with_notes:
+        old_states[project['uuid']] = review_state.get(project['uuid'])
+        review_state[project['uuid']] = current_iso
+
+    print("Review project created! By default, all projects are marked as reviewed.")
+    print("If any projects were NOT actually reviewed, please enter their numbers (separated by comma):")
     for idx, project in enumerate(projects_with_notes, start=1):
         print(f"{idx}. {project['title']} (UUID: {project['uuid']})")
-    reviewed_input = input("Enter project numbers separated by comma (e.g. 1,3,4) or press Enter to skip: ")
-    reviewed_projects = []
-    if reviewed_input.strip():
+    not_reviewed_input = input("Enter project numbers separated by comma (e.g. 1,3,4) or press Enter if all were reviewed: ")
+    if not_reviewed_input.strip():
         try:
-            indices = [int(s.strip()) for s in reviewed_input.split(',')]
+            indices = [int(s.strip()) for s in not_reviewed_input.split(',')]
             for index in indices:
                 if 1 <= index <= len(projects_with_notes):
-                    reviewed_projects.append(projects_with_notes[index - 1])
+                    project = projects_with_notes[index - 1]
+                    if old_states[project['uuid']] is not None:
+                        review_state[project['uuid']] = old_states[project['uuid']]
+                    else:
+                        if project['uuid'] in review_state:
+                            del review_state[project['uuid']]
         except ValueError:
-            print("Invalid input, no projects will be marked as reviewed.")
-    current_iso = datetime.now().isoformat()
-    for project in reviewed_projects:
-        review_state[project['uuid']] = current_iso
+            print("Invalid input, no changes will be made to review state.")
     save_review_state(review_state)
 
 if __name__ == "__main__":
