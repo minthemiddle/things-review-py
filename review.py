@@ -161,94 +161,226 @@ def generate_review_payload(projects_with_notes: list, area_id: str, title: str)
     }
     return [payload]
 
+def print_step_header(step_num, title):
+    """Print a formatted step header for the GTD review process."""
+    print(f"\n\033[1;36m=== STEP {step_num}: {title} ===\033[0m")
+
+def print_section_header(title):
+    """Print a formatted section header."""
+    print(f"\n\033[1;33m{title}\033[0m")
+
+def print_success(message):
+    """Print a success message."""
+    print(f"\033[1;32m✓ {message}\033[0m")
+
+def print_info(message):
+    """Print an informational message."""
+    print(f"\033[0;34m→ {message}\033[0m")
+
+def print_warning(message):
+    """Print a warning message."""
+    print(f"\033[1;33m! {message}\033[0m")
+
+def print_error(message):
+    """Print an error message."""
+    print(f"\033[1;31m✗ {message}\033[0m")
+
+def get_user_confirmation(prompt="Continue?", default="y"):
+    """Get user confirmation with a formatted prompt."""
+    valid_responses = {"y": True, "n": False}
+    default_display = default.upper() if default.lower() in valid_responses else "Y/N"
+    options = "[Y/n]" if default.lower() == "y" else "[y/N]" if default.lower() == "n" else "[Y/N]"
+    
+    while True:
+        response = input(f"\033[1;35m{prompt} {options}\033[0m ").lower() or default.lower()
+        if response in valid_responses:
+            return valid_responses[response]
+        print_warning("Please answer with 'y' or 'n'")
+
 def perform_full_gtd_review(config: dict, review_state: Dict[str, str]) -> None:
     """
     Perform a full GTD-style review process, guiding the user through each step.
     """
-    print("\n===== FULL GTD REVIEW =====\n")
+    print("\n\033[1;36m╔════════════════════════════════════════╗")
+    print("║           FULL GTD REVIEW             ║")
+    print("╚════════════════════════════════════════╝\033[0m\n")
+    
+    print_info("This process will guide you through a complete GTD review.")
+    print_info("You can quit at any time by pressing Ctrl+C.")
+    print()
+    
+    if not get_user_confirmation("Ready to begin the review?"):
+        print_info("Review cancelled. No changes were made.")
+        return
     
     # Step 1: Collect loose papers and materials
-    print("Step 1: Collect loose papers and materials")
-    input("Press Enter when you've gathered all physical items that need processing...")
+    print_step_header(1, "COLLECT LOOSE PAPERS AND MATERIALS")
+    print("Gather all physical items, notes, and digital information that needs processing.")
+    print("This includes papers, receipts, business cards, and any other items in your physical inbox.")
+    if not get_user_confirmation("Have you gathered all physical items?"):
+        print_warning("Take some time to collect everything before continuing.")
+        input("Press Enter when ready...")
     
     # Step 2: Process all inbox items
-    print("\nStep 2: Process all inbox items")
-    print("Opening Things inbox...")
+    print_step_header(2, "PROCESS ALL INBOX ITEMS")
+    print_info("Opening Things inbox...")
     webbrowser.open("things:///show?id=inbox")
-    input("Process your inbox items and press Enter when done...")
+    print("Process each item in your inbox according to the GTD workflow:")
+    print(" • If it takes less than 2 minutes, do it now")
+    print(" • Delegate what you can")
+    print(" • Defer actionable items as tasks")
+    print(" • File reference materials")
+    print(" • Trash what's not needed")
+    input("\033[1;35mPress Enter when you've processed your inbox...\033[0m ")
     
     # Step 3: Review previous calendar data
-    print("\nStep 3: Review previous calendar data")
-    input("Review your calendar for the past week. Press Enter when done...")
+    print_step_header(3, "REVIEW PREVIOUS CALENDAR DATA")
+    print("Look at your calendar for the past week:")
+    print(" • Capture any missed actions or follow-ups")
+    print(" • Note any lessons learned from meetings or events")
+    print(" • Transfer any relevant information to your system")
+    input("\033[1;35mPress Enter when you've reviewed your past calendar...\033[0m ")
     
     # Step 4: Review upcoming calendar
-    print("\nStep 4: Review upcoming calendar")
-    input("Review your calendar for the upcoming two weeks. Press Enter when done...")
+    print_step_header(4, "REVIEW UPCOMING CALENDAR")
+    print("Look at your calendar for the next two weeks:")
+    print(" • Identify any preparation tasks needed for upcoming events")
+    print(" • Block time for important work")
+    print(" • Ensure you're prepared for all commitments")
+    input("\033[1;35mPress Enter when you've reviewed your upcoming calendar...\033[0m ")
     
     # Step 5: Review waiting for list
-    print("\nStep 5: Review waiting for list")
+    print_step_header(5, "REVIEW WAITING FOR LIST")
     waiting_tag = config.get('gtd_review', {}).get('waiting_for_tag', 'waiting for')
-    print(f"Opening Things '{waiting_tag}' tag...")
+    print_info(f"Opening Things '{waiting_tag}' tag...")
     webbrowser.open(f"things:///show?query={urllib.parse.quote(waiting_tag)}")
-    input("Review your waiting for items. Press Enter when done...")
+    print("Review items you're waiting on others for:")
+    print(" • Follow up on any items that are taking too long")
+    print(" • Update status of items as needed")
+    print(" • Remove completed items")
+    input("\033[1;35mPress Enter when you've reviewed your waiting for items...\033[0m ")
     
     # Step 6: Review project lists
-    print("\nStep 6: Review project lists")
+    print_step_header(6, "REVIEW PROJECT LISTS")
+    
+    total_projects = 0
+    reviewed_projects = 0
+    
     for area_name, area_config in config['reviews'].items():
-        print(f"\nReviewing projects in area: {area_name}")
+        print_section_header(f"Area: {area_name}")
         try:
             areas = fetch_areas(area_config['search_tag'])
             projects = process_projects(areas, None, review_state)
+            total_projects += len(projects)
+            
+            if not projects:
+                print_info(f"No projects found in {area_name}")
+                continue
+                
+            print_info(f"Found {len(projects)} projects to review")
             
             for idx, project in enumerate(projects, start=1):
-                print(f"\nProject {idx}/{len(projects)}: {project['title']}")
-                print(f"Opening project in Things...")
+                print(f"\n\033[1m{idx}/{len(projects)}: {project['title']}\033[0m")
+                print_info("Opening project in Things...")
                 webbrowser.open(f"things:///show?id={project['uuid']}")
                 
-                action = input("Actions: [n]ext, [s]kip, [d]one, [q]uit review: ").lower()
+                print("For each project, ensure:")
+                print(" • The project has a clear outcome/goal")
+                print(" • There's at least one next action")
+                print(" • All tasks are up to date")
+                
+                print("\033[1;35mActions:\033[0m")
+                print(" \033[1;32m[d]\033[0m - Mark as done/reviewed")
+                print(" \033[1;33m[n]\033[0m - Next project (without marking as reviewed)")
+                print(" \033[1;33m[s]\033[0m - Skip this project for now")
+                print(" \033[1;31m[q]\033[0m - Quit project review")
+                
+                action = input("\033[1;35mYour choice [d/n/s/q]:\033[0m ").lower()
                 if action == 'q':
+                    print_warning("Quitting project review")
                     break
                 elif action == 'd':
                     review_state[project['uuid']] = datetime.now().isoformat()
+                    reviewed_projects += 1
+                    print_success(f"Marked '{project['title']}' as reviewed")
                 elif action == 's':
+                    print_info(f"Skipped '{project['title']}'")
                     continue
-                # 'n' or any other input continues to next project
+                else:
+                    print_info(f"Moving to next project without marking as reviewed")
             
             if action == 'q':
                 break
                 
         except (ThingsAPIError, AreaNotFoundError) as e:
-            print(f"Error reviewing {area_name}: {str(e)}")
+            print_error(f"Error reviewing {area_name}: {str(e)}")
+    
+    print_section_header("Project Review Summary")
+    print_info(f"Total projects: {total_projects}")
+    print_info(f"Projects reviewed: {reviewed_projects}")
     
     # Step 7: Review Goals and Objectives
-    print("\nStep 7: Review Goals and Objectives")
-    input("Review your goals and objectives. Press Enter when done...")
+    print_step_header(7, "REVIEW GOALS AND OBJECTIVES")
+    print("Take time to review your goals and objectives:")
+    print(" • Are your projects aligned with your goals?")
+    print(" • Do you need to adjust any goals?")
+    print(" • Are there new projects needed to achieve your goals?")
+    input("\033[1;35mPress Enter when you've reviewed your goals...\033[0m ")
     
     # Step 8: Review Areas of Focus/Responsibility
-    print("\nStep 8: Review Areas of Focus/Responsibility")
-    print("Opening Things areas view...")
+    print_step_header(8, "REVIEW AREAS OF FOCUS/RESPONSIBILITY")
+    print_info("Opening Things areas view...")
     webbrowser.open("things:///show?id=areas")
-    input("Review your areas of responsibility. Press Enter when done...")
+    print("Review your areas of responsibility:")
+    print(" • Are all areas of your life and work represented?")
+    print(" • Are there projects needed in any neglected areas?")
+    print(" • Should any areas be added or removed?")
+    input("\033[1;35mPress Enter when you've reviewed your areas of responsibility...\033[0m ")
     
     # Step 9: Review Someday/Maybe list
-    print("\nStep 9: Review Someday/Maybe list")
+    print_step_header(9, "REVIEW SOMEDAY/MAYBE LIST")
     someday_tag = config.get('gtd_review', {}).get('someday_tag', 'someday')
-    print(f"Opening Things '{someday_tag}' tag...")
+    print_info(f"Opening Things '{someday_tag}' tag...")
     webbrowser.open(f"things:///show?query={urllib.parse.quote(someday_tag)}")
-    input("Review your someday/maybe items. Press Enter when done...")
+    print("Review your someday/maybe items:")
+    print(" • Are there items you want to activate now?")
+    print(" • Are there items you can delete?")
+    print(" • Are there new someday/maybe items to add?")
+    input("\033[1;35mPress Enter when you've reviewed your someday/maybe items...\033[0m ")
     
     # Step 10: Be creative and courageous
-    print("\nStep 10: Be creative and courageous")
-    print("Take some time to think about new ideas or projects you might want to start.")
-    input("Press Enter when you're done with your review...")
+    print_step_header(10, "BE CREATIVE AND COURAGEOUS")
+    print("Take some time to think about new ideas or projects:")
+    print(" • What new initiatives would you like to start?")
+    print(" • Are there any bold moves you should make?")
+    print(" • What would make the biggest positive difference in your life or work?")
+    input("\033[1;35mPress Enter when you're done with your creative thinking...\033[0m ")
     
-    print("\n===== FULL GTD REVIEW COMPLETED =====\n")
-    print("Saving review state...")
+    print("\n\033[1;32m╔════════════════════════════════════════╗")
+    print("║       FULL GTD REVIEW COMPLETED       ║")
+    print("╚════════════════════════════════════════╝\033[0m\n")
+    
+    print_info("Saving review state...")
     save_review_state(review_state)
+    print_success("Review state saved successfully!")
+    
+    print("\nNext scheduled review: " + 
+          (datetime.now() + datetime.timedelta(days=config.get('gtd_review', {}).get('review_frequency_days', 7))).strftime("%A, %B %d"))
 
 def main() -> None:
-    logging.basicConfig(level=logging.ERROR)
+    """Main function to run the review process."""
+    # Set up colorful logging
+    logging.basicConfig(
+        level=logging.ERROR,
+        format="\033[1;31m%(levelname)s: %(message)s\033[0m"
+    )
+    
     try:
+        # Display welcome banner
+        print("\n\033[1;36m╔════════════════════════════════════════╗")
+        print("║           THINGS GTD REVIEW TOOL        ║")
+        print("╚════════════════════════════════════════╝\033[0m\n")
+        
         config = load_config()
         available_reviews = list(config['reviews'].keys())
         args = parse_args(available_reviews)
@@ -262,58 +394,114 @@ def main() -> None:
             
         if args.area not in config['reviews']:
             raise AreaNotFoundError(f"Review configuration '{args.area}' not found in config")
+        
+        print_section_header(f"AREA REVIEW: {args.area.upper()}")
+        
         review_config = config['reviews'][args.area]
         search_tag = review_config['search_tag']
         save_area = review_config['save_area']
+        
+        print_info(f"Searching for projects with tag: {search_tag}")
+        print_info(f"Review will be saved to area: {save_area}")
+        if args.number:
+            print_info(f"Limiting review to {args.number} projects")
+            
     except (ConfigError, AreaNotFoundError) as e:
-        logging.error(f"Configuration error: {str(e)}")
+        print_error(f"Configuration error: {str(e)}")
         sys.exit(1)
 
     try:
+        print_info("Fetching areas from Things...")
         areas = fetch_areas(search_tag)
+        print_success(f"Found {len(areas)} areas matching tag '{search_tag}'")
     except ThingsAPIError as e:
-        logging.error(str(e))
+        print_error(str(e))
         sys.exit(1)
-    review_state = load_review_state()
 
+    # Generate review title with current date information
     current_year, current_week_number, _ = datetime.now().isocalendar()
     formatted_title = review_config.get('title_format', '🎥 Review - {year}-cw{cw:02d}{n}').format(
         year=str(current_year)[2:],
         cw=current_week_number,
         n=f"{args.number}" if args.number else ""
     )
+    
+    print_info(f"Creating review project: \"{formatted_title}\"")
+    
+    # Process projects and create review
     projects_with_notes = process_projects(areas, args.number, review_state)
+    
+    if not projects_with_notes:
+        print_warning("No projects found to review!")
+        return
+        
+    print_success(f"Found {len(projects_with_notes)} projects to include in review")
+    
+    # Generate Things URL and open it
     things_payload = generate_review_payload(projects_with_notes, save_area, formatted_title)
     things_json = json.dumps(things_payload)
     things_json_encoded = urllib.parse.quote(things_json)
     things_url = f'things:///json?data={things_json_encoded}'
-    import webbrowser
+    
+    print_info("Opening Things to create review project...")
     webbrowser.open(things_url)
+    
+    # Update review state
     current_iso = datetime.now().isoformat()
     old_states = {}
     for project in projects_with_notes:
         old_states[project['uuid']] = review_state.get(project['uuid'])
         review_state[project['uuid']] = current_iso
 
-    print("Review project created! By default, all projects are marked as reviewed.")
-    print("If any projects were NOT actually reviewed, please enter their numbers (separated by comma):")
+    print_section_header("REVIEW COMPLETION")
+    print_success("Review project created in Things!")
+    print_info("By default, all projects are marked as reviewed.")
+    
+    # Display projects in a more readable format
+    print("\nIncluded projects:")
     for idx, project in enumerate(projects_with_notes, start=1):
-        print(f"{idx}. {project['title']} (UUID: {project['uuid']})")
-    not_reviewed_input = input("Enter project numbers separated by comma (e.g. 1,3,4) or press Enter if all were reviewed: ")
+        last_reviewed = old_states[project['uuid']]
+        last_reviewed_str = ""
+        if last_reviewed:
+            try:
+                last_date = datetime.fromisoformat(last_reviewed)
+                last_reviewed_str = f" (Last reviewed: {last_date.strftime('%Y-%m-%d')})"
+            except ValueError:
+                pass
+        print(f"  \033[1m{idx}.\033[0m {project['title']}{last_reviewed_str}")
+    
+    print("\n\033[1;35mIf any projects were NOT actually reviewed, please enter their numbers.\033[0m")
+    not_reviewed_input = input("Enter numbers separated by comma (e.g. 1,3,4) or press Enter if all were reviewed: ")
+    
     if not_reviewed_input.strip():
         try:
             indices = [int(s.strip()) for s in not_reviewed_input.split(',')]
+            skipped_projects = []
+            
             for index in indices:
                 if 1 <= index <= len(projects_with_notes):
                     project = projects_with_notes[index - 1]
+                    skipped_projects.append(project['title'])
                     if old_states[project['uuid']] is not None:
                         review_state[project['uuid']] = old_states[project['uuid']]
                     else:
                         if project['uuid'] in review_state:
                             del review_state[project['uuid']]
+            
+            if skipped_projects:
+                print_info(f"Marked {len(skipped_projects)} projects as not reviewed:")
+                for project in skipped_projects:
+                    print(f"  • {project}")
         except ValueError:
-            print("Invalid input, no changes will be made to review state.")
+            print_warning("Invalid input, all projects will remain marked as reviewed.")
+    
+    # Save the updated review state
     save_review_state(review_state)
+    print_success("Review state saved successfully!")
+    
+    # Show next scheduled review date
+    next_review = datetime.now() + datetime.timedelta(days=config.get('gtd_review', {}).get('review_frequency_days', 7))
+    print(f"\nNext scheduled review: \033[1m{next_review.strftime('%A, %B %d')}\033[0m")
 
 if __name__ == "__main__":
     main()
