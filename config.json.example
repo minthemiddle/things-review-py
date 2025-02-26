@@ -9,5 +9,10 @@
             "search_tag": "💪 Private",
             "save_area": "YourPrivateAreaID"
         }
+    },
+    "gtd_review": {
+        "waiting_for_tag": "waiting for",
+        "someday_tag": "someday",
+        "review_frequency_days": 7
     }
 }

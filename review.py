@@ -7,6 +7,7 @@ import subprocess
 import sys
 import os
 import logging
+import webbrowser
 from typing import List, Dict, Optional
 
 STATE_FILE = "review_state.json"
@@ -77,8 +78,10 @@ def parse_args(available_reviews: List[str]) -> argparse.Namespace:
     Parse command-line arguments.
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument("area", choices=available_reviews, help="Specify the area for which to generate the review")
+    parser.add_argument("area", choices=available_reviews + ["full"], nargs="?", default="full",
+                        help="Specify the area for which to generate the review, or 'full' for a complete GTD review")
     parser.add_argument("-n", "--number", type=int, help="Limit the number of projects to review")
+    parser.add_argument("--full", action="store_true", help="Perform a full GTD-style review")
     return parser.parse_args()
 
 def fetch_areas(search_tag: str) -> list:
@@ -158,12 +161,105 @@ def generate_review_payload(projects_with_notes: list, area_id: str, title: str)
     }
     return [payload]
 
+def perform_full_gtd_review(config: dict, review_state: Dict[str, str]) -> None:
+    """
+    Perform a full GTD-style review process, guiding the user through each step.
+    """
+    print("\n===== FULL GTD REVIEW =====\n")
+    
+    # Step 1: Collect loose papers and materials
+    print("Step 1: Collect loose papers and materials")
+    input("Press Enter when you've gathered all physical items that need processing...")
+    
+    # Step 2: Process all inbox items
+    print("\nStep 2: Process all inbox items")
+    print("Opening Things inbox...")
+    webbrowser.open("things:///show?id=inbox")
+    input("Process your inbox items and press Enter when done...")
+    
+    # Step 3: Review previous calendar data
+    print("\nStep 3: Review previous calendar data")
+    input("Review your calendar for the past week. Press Enter when done...")
+    
+    # Step 4: Review upcoming calendar
+    print("\nStep 4: Review upcoming calendar")
+    input("Review your calendar for the upcoming two weeks. Press Enter when done...")
+    
+    # Step 5: Review waiting for list
+    print("\nStep 5: Review waiting for list")
+    waiting_tag = config.get('gtd_review', {}).get('waiting_for_tag', 'waiting for')
+    print(f"Opening Things '{waiting_tag}' tag...")
+    webbrowser.open(f"things:///show?query={urllib.parse.quote(waiting_tag)}")
+    input("Review your waiting for items. Press Enter when done...")
+    
+    # Step 6: Review project lists
+    print("\nStep 6: Review project lists")
+    for area_name, area_config in config['reviews'].items():
+        print(f"\nReviewing projects in area: {area_name}")
+        try:
+            areas = fetch_areas(area_config['search_tag'])
+            projects = process_projects(areas, None, review_state)
+            
+            for idx, project in enumerate(projects, start=1):
+                print(f"\nProject {idx}/{len(projects)}: {project['title']}")
+                print(f"Opening project in Things...")
+                webbrowser.open(f"things:///show?id={project['uuid']}")
+                
+                action = input("Actions: [n]ext, [s]kip, [d]one, [q]uit review: ").lower()
+                if action == 'q':
+                    break
+                elif action == 'd':
+                    review_state[project['uuid']] = datetime.now().isoformat()
+                elif action == 's':
+                    continue
+                # 'n' or any other input continues to next project
+            
+            if action == 'q':
+                break
+                
+        except (ThingsAPIError, AreaNotFoundError) as e:
+            print(f"Error reviewing {area_name}: {str(e)}")
+    
+    # Step 7: Review Goals and Objectives
+    print("\nStep 7: Review Goals and Objectives")
+    input("Review your goals and objectives. Press Enter when done...")
+    
+    # Step 8: Review Areas of Focus/Responsibility
+    print("\nStep 8: Review Areas of Focus/Responsibility")
+    print("Opening Things areas view...")
+    webbrowser.open("things:///show?id=areas")
+    input("Review your areas of responsibility. Press Enter when done...")
+    
+    # Step 9: Review Someday/Maybe list
+    print("\nStep 9: Review Someday/Maybe list")
+    someday_tag = config.get('gtd_review', {}).get('someday_tag', 'someday')
+    print(f"Opening Things '{someday_tag}' tag...")
+    webbrowser.open(f"things:///show?query={urllib.parse.quote(someday_tag)}")
+    input("Review your someday/maybe items. Press Enter when done...")
+    
+    # Step 10: Be creative and courageous
+    print("\nStep 10: Be creative and courageous")
+    print("Take some time to think about new ideas or projects you might want to start.")
+    input("Press Enter when you're done with your review...")
+    
+    print("\n===== FULL GTD REVIEW COMPLETED =====\n")
+    print("Saving review state...")
+    save_review_state(review_state)
+
 def main() -> None:
     logging.basicConfig(level=logging.ERROR)
     try:
         config = load_config()
         available_reviews = list(config['reviews'].keys())
         args = parse_args(available_reviews)
+        
+        review_state = load_review_state()
+        
+        # Handle full GTD review
+        if args.full or args.area == "full":
+            perform_full_gtd_review(config, review_state)
+            return
+            
         if args.area not in config['reviews']:
             raise AreaNotFoundError(f"Review configuration '{args.area}' not found in config")
         review_config = config['reviews'][args.area]
