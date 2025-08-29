@@ -5,6 +5,7 @@
 #     "click",
 #     "rich",
 #     "python-dotenv",
+#     "things.py",
 # ]
 # ///
 
