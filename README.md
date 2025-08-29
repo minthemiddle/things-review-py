@@ -188,7 +188,6 @@ uv run test_review.py
 
 ### Code Structure
 - `review.py` - Main script with modernized architecture
-- `review_classes.py` - Full class-based implementation (reference)
 - `test_review.py` - Comprehensive test suite
 - `config.json` - Configuration file (copy from config.json.example)
 
