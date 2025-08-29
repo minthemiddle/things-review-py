@@ -206,28 +206,43 @@ def validate_area_choice(ctx: click.Context, param: click.Parameter, value: str)
         # If config can't be loaded, we'll handle it in main
         return value
 
-def fetch_areas(search_tag: str) -> List[Dict]:
+def fetch_areas(search_tag: Optional[str] = None, area_ids: Optional[List[str]] = None) -> List[Dict]:
     """
-    Fetch areas from Things API based on the search tag.
+    Fetch areas from Things API based on search tag or specific area IDs.
     
     Args:
-        search_tag: The tag to search for in Things areas
+        search_tag: Optional tag to search for in Things areas (tag-based mode)
+        area_ids: Optional list of specific area IDs to fetch (direct area mode)
         
     Returns:
         List[Dict]: List of area dictionaries from Things API, each containing items
         
     Raises:
         ThingsAPIError: If no areas are found or API communication fails
+        ValueError: If neither search_tag nor area_ids are provided
     
-    Why: Encapsulates Things API interaction with proper error handling and validation
-    Result: Returns validated areas list or raises descriptive errors for debugging
+    Why: Supports both tag-based workflow and direct area access for users without tags
+    Result: Returns validated areas list using the most appropriate method for user's setup
     """
     try:
-        areas = things.areas(tag=search_tag, include_items=True)
-        if not areas:
-            raise ThingsAPIError(f"No areas found with tag '{search_tag}'")
-        return areas
+        if search_tag and search_tag.strip():
+            # Tag-based mode: search for areas with specific tag
+            areas = things.areas(tag=search_tag, include_items=True)
+            if not areas:
+                raise ThingsAPIError(f"No areas found with tag '{search_tag}'")
+            return areas
+        elif area_ids:
+            # Direct area mode: fetch specific areas by ID
+            all_areas = things.areas(include_items=True)
+            filtered_areas = [area for area in all_areas if area.get('uuid') in area_ids]
+            if not filtered_areas:
+                raise ThingsAPIError(f"No areas found with IDs: {area_ids}")
+            return filtered_areas
+        else:
+            raise ValueError("Either search_tag or area_ids must be provided")
     except Exception as e:
+        if isinstance(e, (ThingsAPIError, ValueError)):
+            raise
         raise ThingsAPIError(f"Error communicating with Things API: {str(e)}")
 
 def process_projects(areas: List[Dict], limit: Optional[int], review_state: ReviewState) -> List[Dict[str, str]]:
@@ -447,7 +462,17 @@ def perform_full_gtd_review(config: dict, review_state: ReviewState) -> None:
     for area_name, area_config in config['reviews'].items():
         print_section_header(f"Area: {area_name}")
         try:
-            areas = fetch_areas(area_config['search_tag'])
+            search_tag = area_config.get('search_tag', '').strip()
+            area_ids = area_config.get('area_ids', [])
+            
+            if search_tag:
+                areas = fetch_areas(search_tag=search_tag)
+            elif area_ids:
+                areas = fetch_areas(area_ids=area_ids)
+            else:
+                console.print(f"[yellow]! Skipping {area_name}: no search_tag or area_ids specified[/yellow]")
+                continue
+                
             projects = process_projects(areas, None, review_state)
             total_projects += len(projects)
             
@@ -596,10 +621,18 @@ def main(area: str, number: Optional[int], full: bool) -> None:
         print_section_header(f"AREA REVIEW: {area.upper()}")
         
         review_config = config['reviews'][area]
-        search_tag = review_config['search_tag']
+        search_tag = review_config.get('search_tag', '').strip()
+        area_ids = review_config.get('area_ids', [])
         save_area = review_config['save_area']
         
-        print_info(f"Searching for projects with tag: {search_tag}")
+        # Determine the mode and provide appropriate user feedback
+        if search_tag:
+            print_info(f"Searching for projects with tag: {search_tag}")
+        elif area_ids:
+            print_info(f"Fetching projects from {len(area_ids)} specific area(s)")
+        else:
+            raise AreaNotFoundError(f"Review configuration '{area}' must specify either 'search_tag' or 'area_ids'")
+            
         print_info(f"Review will be saved to area: {save_area}")
         if number:
             print_info(f"Limiting review to {number} projects")
@@ -610,8 +643,12 @@ def main(area: str, number: Optional[int], full: bool) -> None:
 
     try:
         print_info("Fetching areas from Things...")
-        areas = fetch_areas(search_tag)
-        print_success(f"Found {len(areas)} areas matching tag '{search_tag}'")
+        if search_tag:
+            areas = fetch_areas(search_tag=search_tag)
+            print_success(f"Found {len(areas)} areas matching tag '{search_tag}'")
+        else:
+            areas = fetch_areas(area_ids=area_ids)
+            print_success(f"Found {len(areas)} specific areas")
     except ThingsAPIError as e:
         print_error(str(e))
         sys.exit(1)

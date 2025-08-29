@@ -232,7 +232,7 @@ class TestThingsAPIIntegration:
         Result: Should return areas list from API"""
         mock_areas.return_value = [{'id': 'area1', 'title': 'Work'}]
         
-        result = fetch_areas('work')
+        result = fetch_areas(search_tag='work')
         assert result == [{'id': 'area1', 'title': 'Work'}]
         mock_areas.assert_called_once_with(tag='work', include_items=True)
     
@@ -243,7 +243,7 @@ class TestThingsAPIIntegration:
         mock_areas.return_value = []
         
         with pytest.raises(ThingsAPIError):
-            fetch_areas('nonexistent')
+            fetch_areas(search_tag='nonexistent')
     
     @patch('review.things.areas')
     def test_fetch_areas_api_error(self, mock_areas):
@@ -252,7 +252,39 @@ class TestThingsAPIIntegration:
         mock_areas.side_effect = Exception("API Error")
         
         with pytest.raises(ThingsAPIError):
-            fetch_areas('work')
+            fetch_areas(search_tag='work')
+    
+    @patch('review.things.areas')
+    def test_fetch_areas_by_ids_success(self, mock_areas):
+        """What: Test successful area fetching by specific IDs
+        Result: Should return filtered areas matching the provided IDs"""
+        all_areas = [
+            {'uuid': 'area1', 'title': 'Work'}, 
+            {'uuid': 'area2', 'title': 'Personal'},
+            {'uuid': 'area3', 'title': 'Other'}
+        ]
+        mock_areas.return_value = all_areas
+        
+        result = fetch_areas(area_ids=['area1', 'area2'])
+        assert len(result) == 2
+        assert result[0]['uuid'] == 'area1'
+        assert result[1]['uuid'] == 'area2'
+        mock_areas.assert_called_once_with(include_items=True)
+    
+    @patch('review.things.areas')  
+    def test_fetch_areas_by_ids_not_found(self, mock_areas):
+        """What: Test when specified area IDs don't exist
+        Result: Should raise ThingsAPIError"""
+        mock_areas.return_value = [{'uuid': 'area1', 'title': 'Work'}]
+        
+        with pytest.raises(ThingsAPIError):
+            fetch_areas(area_ids=['nonexistent1', 'nonexistent2'])
+    
+    def test_fetch_areas_no_parameters(self):
+        """What: Test when neither search_tag nor area_ids provided
+        Result: Should raise ValueError"""
+        with pytest.raises(ValueError):
+            fetch_areas()
 
 
 class TestPayloadGeneration:

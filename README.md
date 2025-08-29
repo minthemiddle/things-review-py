@@ -50,11 +50,12 @@ cp config.json.example config.json
      - Set the `search_tag` to match the tag you use in Things3
      - Set the `save_area` to the Things3 area ID where you want reviews saved
 
-3. To get an area ID from Things3:
-   - Right-click on the area in Things3
-   - Select "Copy Link to Area"
+3. To get area IDs from Things3:
+   - Right-click on each area in Things3
+   - Select "Copy Link to Area"  
    - The link will look like: `things:///show?id=UUID`
-   - Copy the UUID part (the long string after `id=`) as your area ID
+   - Copy the UUID part (the long string after `id=`) 
+   - Use this UUID as your `save_area` or add to `area_ids` array
 
 ### 4. Running Reviews
 
@@ -144,6 +145,15 @@ uv run review.py --help
         "private": {
             "search_tag": "💪 Private",
             "save_area": "YourPrivateAreaID"
+        },
+        "clients": {
+            "search_tag": "",
+            "area_ids": ["ClientArea1ID", "ClientArea2ID"],
+            "save_area": "ClientReviewAreaID"
+        },
+        "specific-areas": {
+            "area_ids": ["SpecificAreaID1", "SpecificAreaID2"],
+            "save_area": "SpecificAreasReviewID"
         }
     },
     "gtd_review": {
@@ -156,10 +166,21 @@ uv run review.py --help
 
 ### Configuration Options
 
-#### Reviews Section
-- `work`, `private`: Names of your review areas (can be customized)
-- `search_tag`: Tag to find tasks to review in Things
+#### Reviews Section - Two Modes Available
+
+**Tag-Based Mode (Original):**
+- `search_tag`: Tag to search for in Things areas (e.g., "🛠 Work")  
 - `save_area`: UUID of the area where to save the review
+
+**Direct Area Mode (New - For Users Without Tags):**
+- `area_ids`: Array of specific Things area UUIDs to include in review
+- `save_area`: UUID of the area where to save the review
+
+**Configuration Rules:**
+- Each review configuration must specify either `search_tag` OR `area_ids`
+- Use empty `search_tag: ""` when using `area_ids` mode  
+- `area_ids` can contain multiple area UUIDs for multi-area reviews
+- Review names (`work`, `private`, etc.) can be customized to your needs
 
 #### GTD Review Section
 - `waiting_for_tag`: Tag used in Things for items you're waiting on others for
