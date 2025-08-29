@@ -145,14 +145,23 @@ class ThingsAPIError(Exception):
     """Raised when there's an error communicating with Things API"""
     pass
 
-def load_config(config_path: str = 'config.json') -> dict:
+def load_config(config_path: str = 'config.json') -> Dict:
     """
     Load and validate configuration from the given JSON file.
-    Raises:
-        MissingConfigError: If config file is missing.
-        InvalidConfigError: If config file is invalid.
+    
+    Args:
+        config_path: Path to the JSON configuration file
+        
     Returns:
-        dict: The configuration dictionary.
+        Dict: The parsed and validated configuration dictionary containing 'reviews' key
+              with area configurations and optional 'gtd_review' settings
+    
+    Raises:
+        MissingConfigError: If config file is missing at the specified path
+        InvalidConfigError: If config file contains invalid JSON or missing required keys
+        
+    Why: Configuration validation prevents runtime errors and provides clear feedback
+    Result: Returns validated config dict or raises descriptive errors for troubleshooting
     """
     if not os.path.exists(config_path):
         raise MissingConfigError(f"{config_path} file not found")
@@ -165,12 +174,23 @@ def load_config(config_path: str = 'config.json') -> dict:
         raise InvalidConfigError("Missing or empty 'reviews' key in config")
     return config
 
-def validate_area_choice(ctx, param, value):
+def validate_area_choice(ctx: click.Context, param: click.Parameter, value: str) -> str:
     """
     Validate that the area choice is either 'full' or exists in config.
     
+    Args:
+        ctx: Click context object (unused but required by Click callback signature)
+        param: Click parameter object (unused but required by Click callback signature)
+        value: The area name provided by the user
+    
+    Returns:
+        str: The validated area choice
+        
+    Raises:
+        click.BadParameter: If the area choice is invalid
+    
     Why: Click doesn't have dynamic choices like argparse, so we validate manually
-    Result: Returns validated area choice or raises click.BadParameter
+    Result: Returns validated area choice or raises descriptive error for invalid choices
     """
     if value == "full":
         return value
@@ -185,9 +205,21 @@ def validate_area_choice(ctx, param, value):
         # If config can't be loaded, we'll handle it in main
         return value
 
-def fetch_areas(search_tag: str) -> list:
+def fetch_areas(search_tag: str) -> List[Dict]:
     """
     Fetch areas from Things API based on the search tag.
+    
+    Args:
+        search_tag: The tag to search for in Things areas
+        
+    Returns:
+        List[Dict]: List of area dictionaries from Things API, each containing items
+        
+    Raises:
+        ThingsAPIError: If no areas are found or API communication fails
+    
+    Why: Encapsulates Things API interaction with proper error handling and validation
+    Result: Returns validated areas list or raises descriptive errors for debugging
     """
     try:
         areas = things.areas(tag=search_tag, include_items=True)
@@ -197,10 +229,22 @@ def fetch_areas(search_tag: str) -> list:
     except Exception as e:
         raise ThingsAPIError(f"Error communicating with Things API: {str(e)}")
 
-def process_projects(areas: list, limit: Optional[int], review_state: ReviewState) -> List[Dict[str, str]]:
+def process_projects(areas: List[Dict], limit: Optional[int], review_state: ReviewState) -> List[Dict[str, str]]:
     """
     Process projects from areas, sorting by when they were last reviewed and deadline.
-    Projects that have not been reviewed recently come first.
+    
+    Args:
+        areas: List of area dictionaries from Things API, each containing 'items'
+        limit: Maximum number of projects to return, None for no limit
+        review_state: ReviewState instance for tracking review timestamps
+        
+    Returns:
+        List[Dict[str, str]]: List of project dictionaries with title and uuid keys,
+                              sorted by review priority (oldest reviews first)
+    
+    Why: Complex sorting logic needs proper encapsulation and clear parameter validation
+    Result: Returns prioritized project list for review, with never-reviewed projects first,
+            then sorted by last review date and deadline for optimal review workflow
     """
     all_projects = []
     for area in areas:
@@ -226,17 +270,21 @@ def process_projects(areas: list, limit: Optional[int], review_state: ReviewStat
     selected = all_projects[:limit] if limit else all_projects
     return [{'title': p['title'], 'uuid': p['uuid']} for p in selected]
 
-def generate_review_payload(projects_with_notes: list, area_id: str, title: str) -> list:
+def generate_review_payload(projects_with_notes: List[Dict[str, str]], area_id: str, title: str) -> List[Dict]:
     """
     Generate the Things3 API payload for creating a review project.
     
     Args:
-        projects_with_notes (list): List of project dictionaries containing 'title' and 'uuid'
-        area_id (str): The Things3 area ID where the review should be created
-        title (str): The formatted title for the review project
+        projects_with_notes: List of project dictionaries containing 'title' and 'uuid' keys
+        area_id: The Things3 area ID where the review should be created  
+        title: The formatted title for the review project (e.g., "Work Review - 24-cw34")
         
     Returns:
-        list: A list containing the Things3 API payload structure
+        List[Dict]: A list containing the Things3 API payload structure ready for JSON encoding
+        
+    Why: Things3 API requires specific payload structure with nested project/todo hierarchy
+    Result: Returns properly formatted payload that Things3 can process to create review project
+            with clickable links back to original projects for easy navigation
     """
     payload = {
         'type': 'project',
@@ -257,7 +305,7 @@ def generate_review_payload(projects_with_notes: list, area_id: str, title: str)
     }
     return [payload]
 
-def print_step_header(step_num, title):
+def print_step_header(step_num: int, title: str) -> None:
     """
     Print a formatted step header for the GTD review process.
     
@@ -267,7 +315,7 @@ def print_step_header(step_num, title):
     console.print()
     console.print(Panel(f"STEP {step_num}: {title}", style="bold cyan", padding=(0, 1)))
 
-def print_section_header(title):
+def print_section_header(title: str) -> None:
     """
     Print a formatted section header.
     
@@ -277,7 +325,7 @@ def print_section_header(title):
     console.print()
     console.print(f"[bold yellow]{title}[/bold yellow]")
 
-def print_success(message):
+def print_success(message: str) -> None:
     """
     Print a success message with checkmark.
     
@@ -286,7 +334,7 @@ def print_success(message):
     """
     console.print(f"[bold green]✓ {message}[/bold green]")
 
-def print_info(message):
+def print_info(message: str) -> None:
     """
     Print an informational message with arrow.
     
@@ -295,7 +343,7 @@ def print_info(message):
     """
     console.print(f"[blue]→ {message}[/blue]")
 
-def print_warning(message):
+def print_warning(message: str) -> None:
     """
     Print a warning message with exclamation.
     
@@ -304,7 +352,7 @@ def print_warning(message):
     """
     console.print(f"[bold yellow]! {message}[/bold yellow]")
 
-def print_error(message):
+def print_error(message: str) -> None:
     """
     Print an error message with X mark.
     
@@ -313,7 +361,7 @@ def print_error(message):
     """
     console.print(f"[bold red]✗ {message}[/bold red]")
 
-def get_user_confirmation(prompt="Continue?", default="y"):
+def get_user_confirmation(prompt: str = "Continue?", default: str = "y") -> bool:
     """
     Get user confirmation with Rich prompt.
     
