@@ -4,6 +4,7 @@
 # dependencies = [
 #     "pytest",
 #     "pytest-mock",
+#     "click",
 # ]
 # ///
 
@@ -34,10 +35,10 @@ from unittest.mock import patch, mock_open, MagicMock
 sys.modules['things'] = MagicMock()
 
 from review import (
-    load_review_state, save_review_state, load_config, parse_args,
+    load_review_state, save_review_state, load_config, validate_area_choice,
     fetch_areas, process_projects, generate_review_payload,
     ConfigError, MissingConfigError, InvalidConfigError, 
-    AreaNotFoundError, ThingsAPIError
+    AreaNotFoundError, ThingsAPIError, main
 )
 
 
@@ -255,38 +256,49 @@ class TestPayloadGeneration:
         assert 'uuid-1' in item['attributes']['notes']
 
 
-class TestArgumentParsing:
-    """Test command line argument parsing."""
+class TestClickIntegration:
+    """Test Click command line interface."""
     
-    def test_parse_args_default_full(self):
-        """What: Test default behavior when no args provided
-        Result: Should default to 'full' area"""
-        with patch('sys.argv', ['review.py']):
-            args = parse_args(['work', 'personal'])
-            assert args.area == 'full'
-            assert args.number is None
-            assert args.full is False
+    def test_validate_area_choice_full(self):
+        """What: Test validation of 'full' area choice
+        Result: Should accept 'full' without config check"""
+        result = validate_area_choice(None, None, 'full')
+        assert result == 'full'
     
-    def test_parse_args_specific_area(self):
-        """What: Test parsing specific area argument
-        Result: Should set area correctly"""
-        with patch('sys.argv', ['review.py', 'work']):
-            args = parse_args(['work', 'personal'])
-            assert args.area == 'work'
+    def test_validate_area_choice_valid_area(self):
+        """What: Test validation of area that exists in config
+        Result: Should accept valid area from config"""
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+            test_config = {"reviews": {"work": {"search_tag": "work"}}}
+            json.dump(test_config, f)
+            f.flush()
+            
+            with patch('review.load_config') as mock_load:
+                mock_load.return_value = test_config
+                result = validate_area_choice(None, None, 'work')
+                assert result == 'work'
+            
+            os.unlink(f.name)
     
-    def test_parse_args_with_number_limit(self):
-        """What: Test parsing number limit option
-        Result: Should set number correctly"""
-        with patch('sys.argv', ['review.py', '--number', '5']):
-            args = parse_args(['work'])
-            assert args.number == 5
-    
-    def test_parse_args_full_flag(self):
-        """What: Test parsing full review flag
-        Result: Should set full flag to True"""
-        with patch('sys.argv', ['review.py', '--full']):
-            args = parse_args(['work'])
-            assert args.full is True
+    @patch('click.echo')
+    def test_main_command_with_click_runner(self, mock_echo):
+        """What: Test main function can be called as Click command
+        Result: Should execute without errors when mocked properly"""
+        from click.testing import CliRunner
+        
+        # Mock all the dependencies
+        with patch('review.load_config') as mock_config, \
+             patch('review.load_review_state') as mock_state, \
+             patch('review.perform_full_gtd_review') as mock_review:
+            
+            mock_config.return_value = {"reviews": {"work": {}}}
+            mock_state.return_value = {}
+            
+            runner = CliRunner()
+            result = runner.invoke(main, ['--full'])
+            
+            # Should not crash (exit code 0 or at least handle the mocked scenario)
+            assert mock_review.called
 
 
 class TestErrorHandling:

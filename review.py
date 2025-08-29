@@ -9,7 +9,7 @@
 # ///
 
 import things
-import argparse
+import click
 import urllib.parse
 import json
 from datetime import datetime
@@ -83,16 +83,25 @@ def load_config(config_path: str = 'config.json') -> dict:
         raise InvalidConfigError("Missing or empty 'reviews' key in config")
     return config
 
-def parse_args(available_reviews: List[str]) -> argparse.Namespace:
+def validate_area_choice(ctx, param, value):
     """
-    Parse command-line arguments.
+    Validate that the area choice is either 'full' or exists in config.
+    
+    Why: Click doesn't have dynamic choices like argparse, so we validate manually
+    Result: Returns validated area choice or raises click.BadParameter
     """
-    parser = argparse.ArgumentParser()
-    parser.add_argument("area", choices=available_reviews + ["full"], nargs="?", default="full",
-                        help="Specify the area for which to generate the review, or 'full' for a complete GTD review")
-    parser.add_argument("-n", "--number", type=int, help="Limit the number of projects to review")
-    parser.add_argument("--full", action="store_true", help="Perform a full GTD-style review")
-    return parser.parse_args()
+    if value == "full":
+        return value
+    
+    try:
+        config = load_config()
+        available_reviews = list(config['reviews'].keys())
+        if value in available_reviews:
+            return value
+        raise click.BadParameter(f"'{value}' is not a valid area. Choose from: {', '.join(available_reviews + ['full'])}")
+    except (ConfigError, FileNotFoundError):
+        # If config can't be loaded, we'll handle it in main
+        return value
 
 def fetch_areas(search_tag: str) -> list:
     """
@@ -377,8 +386,19 @@ def perform_full_gtd_review(config: dict, review_state: Dict[str, str]) -> None:
     print("\nNext scheduled review: " + 
           (datetime.now() + datetime.timedelta(days=config.get('gtd_review', {}).get('review_frequency_days', 7))).strftime("%A, %B %d"))
 
-def main() -> None:
-    """Main function to run the review process."""
+@click.command()
+@click.argument('area', default='full', callback=validate_area_choice)
+@click.option('-n', '--number', type=int, help='Limit the number of projects to review')
+@click.option('--full', is_flag=True, help='Perform a full GTD-style review')
+def main(area: str, number: Optional[int], full: bool) -> None:
+    """
+    Main function to run the GTD review process.
+    
+    AREA: Specify the area for review, or 'full' for a complete GTD review
+    
+    Why: Converted from argparse to Click for better CLI UX and modern Python practices
+    Result: Same functionality with improved user experience and error messages
+    """
     # Set up colorful logging
     logging.basicConfig(
         level=logging.ERROR,
@@ -392,29 +412,26 @@ def main() -> None:
         print("╚════════════════════════════════════════╝\033[0m\n")
         
         config = load_config()
-        available_reviews = list(config['reviews'].keys())
-        args = parse_args(available_reviews)
-        
         review_state = load_review_state()
         
         # Handle full GTD review
-        if args.full or args.area == "full":
+        if full or area == "full":
             perform_full_gtd_review(config, review_state)
             return
             
-        if args.area not in config['reviews']:
-            raise AreaNotFoundError(f"Review configuration '{args.area}' not found in config")
+        if area not in config['reviews']:
+            raise AreaNotFoundError(f"Review configuration '{area}' not found in config")
         
-        print_section_header(f"AREA REVIEW: {args.area.upper()}")
+        print_section_header(f"AREA REVIEW: {area.upper()}")
         
-        review_config = config['reviews'][args.area]
+        review_config = config['reviews'][area]
         search_tag = review_config['search_tag']
         save_area = review_config['save_area']
         
         print_info(f"Searching for projects with tag: {search_tag}")
         print_info(f"Review will be saved to area: {save_area}")
-        if args.number:
-            print_info(f"Limiting review to {args.number} projects")
+        if number:
+            print_info(f"Limiting review to {number} projects")
             
     except (ConfigError, AreaNotFoundError) as e:
         print_error(f"Configuration error: {str(e)}")
@@ -433,13 +450,13 @@ def main() -> None:
     formatted_title = review_config.get('title_format', '🎥 Review - {year}-cw{cw:02d}{n}').format(
         year=str(current_year)[2:],
         cw=current_week_number,
-        n=f"{args.number}" if args.number else ""
+        n=f"{number}" if number else ""
     )
     
     print_info(f"Creating review project: \"{formatted_title}\"")
     
     # Process projects and create review
-    projects_with_notes = process_projects(areas, args.number, review_state)
+    projects_with_notes = process_projects(areas, number, review_state)
     
     if not projects_with_notes:
         print_warning("No projects found to review!")
