@@ -13,31 +13,30 @@ Built with Python 3.13+, featuring a rich terminal interface and comprehensive w
 ## Quick Start
 
 ### Prerequisites
-- Python 3.13+ 
-- [uv](https://github.com/astral-sh/uv) package manager (recommended)
+- [uv](https://github.com/astral-sh/uv) package manager
+- Python 3.13+ (automatically managed by uv)
 
-### 1. Clone and Setup
+### 1. Install uv
+If you don't have uv installed:
+
+```bash
+# macOS/Linux
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Windows
+powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
+
+### 2. Clone and Run
 ```bash
 git clone https://github.com/minthemiddle/things-review-py.git
 cd things-review-py
-```
 
-### 2. Modern Installation (Recommended)
-With uv, no virtual environment setup needed - dependencies are managed automatically:
-
-```bash
-# Script runs with automatic dependency management
+# Run immediately - dependencies are managed automatically
 uv run review.py --help
 ```
 
-### 2. Traditional Installation (Alternative)
-If you prefer traditional Python environments:
-
-```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-pip install click rich python-dotenv
-```
+No virtual environment setup needed - uv handles Python version and dependencies automatically!
 
 ### 3. Configure the Application
 1. Copy the example configuration file:
@@ -62,22 +61,12 @@ cp config.json.example config.json
 #### Area-Specific Review
 Generate a review for a specific area:
 
-**With uv (recommended):**
 ```bash
 # Review all work projects
 uv run review.py work
 
 # Review only 5 work projects  
 uv run review.py work --number 5
-```
-
-**Traditional Python:**
-```bash
-# Review all work projects
-python review.py work
-
-# Review only 5 work projects
-python review.py work -n 5
 ```
 
 This will:
@@ -89,18 +78,10 @@ This will:
 #### Full GTD Review
 Run a comprehensive, guided GTD review process:
 
-**With uv:**
 ```bash
 uv run review.py full
 # or
 uv run review.py --full
-```
-
-**Traditional Python:**
-```bash
-python review.py full
-# or  
-python review.py --full
 ```
 
 This will guide you through a complete GTD review workflow:
@@ -145,8 +126,8 @@ uv run review.py --help
 - **"No areas found"** - Verify your search tags exist in Things3 and match your config
 - **"Invalid area ID"** - Double-check area UUIDs in your configuration
 - **Display issues** - Ensure your terminal supports colors and unicode
-- **Module not found** - With uv, dependencies install automatically; with traditional Python, install manually
-- **Python version** - Script requires Python 3.13+ for modern features
+- **"uv not found"** - Install uv using the installation command above
+- **Python version errors** - uv automatically manages Python 3.13+ installation
 
 ## Configuration
 
@@ -202,11 +183,7 @@ This tool has been fully modernized to use current Python best practices:
 Run the test suite to verify functionality:
 
 ```bash
-# With uv
 uv run test_review.py
-
-# Traditional Python  
-python -m pytest test_review.py -v
 ```
 
 ### Code Structure
