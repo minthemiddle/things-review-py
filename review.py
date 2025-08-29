@@ -1,3 +1,13 @@
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.13"
+# dependencies = [
+#     "click",
+#     "rich",
+#     "python-dotenv",
+# ]
+# ///
+
 import things
 import argparse
 import urllib.parse
