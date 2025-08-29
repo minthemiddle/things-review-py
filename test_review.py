@@ -5,6 +5,7 @@
 #     "pytest",
 #     "pytest-mock",
 #     "click",
+#     "rich",
 # ]
 # ///
 

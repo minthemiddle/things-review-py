@@ -20,7 +20,16 @@ import logging
 import webbrowser
 from typing import List, Dict, Optional
 
+from rich.console import Console
+from rich.panel import Panel
+from rich.prompt import Confirm
+from rich.text import Text
+from rich import print as rich_print
+
 STATE_FILE = "review_state.json"
+
+# Initialize Rich console for better terminal output
+console = Console()
 
 def load_review_state(state_file: str = STATE_FILE) -> Dict[str, str]:
     """
@@ -181,52 +190,85 @@ def generate_review_payload(projects_with_notes: list, area_id: str, title: str)
     return [payload]
 
 def print_step_header(step_num, title):
-    """Print a formatted step header for the GTD review process."""
-    print(f"\n\033[1;36m=== STEP {step_num}: {title} ===\033[0m")
+    """
+    Print a formatted step header for the GTD review process.
+    
+    Why: Rich provides better formatting and color consistency across terminals
+    Result: Displays professional-looking step headers with consistent styling
+    """
+    console.print()
+    console.print(Panel(f"STEP {step_num}: {title}", style="bold cyan", padding=(0, 1)))
 
 def print_section_header(title):
-    """Print a formatted section header."""
-    print(f"\n\033[1;33m{title}\033[0m")
+    """
+    Print a formatted section header.
+    
+    Why: Rich provides better typography and color handling than manual ANSI codes
+    Result: Clean, readable section headers with consistent styling
+    """
+    console.print()
+    console.print(f"[bold yellow]{title}[/bold yellow]")
 
 def print_success(message):
-    """Print a success message."""
-    print(f"\033[1;32m✓ {message}\033[0m")
+    """
+    Print a success message with checkmark.
+    
+    Why: Rich handles unicode symbols and colors better across different terminals
+    Result: Consistent success messages with proper checkmark display
+    """
+    console.print(f"[bold green]✓ {message}[/bold green]")
 
 def print_info(message):
-    """Print an informational message."""
-    print(f"\033[0;34m→ {message}\033[0m")
+    """
+    Print an informational message with arrow.
+    
+    Why: Rich provides better color control and text rendering
+    Result: Clean informational messages with consistent blue styling
+    """
+    console.print(f"[blue]→ {message}[/blue]")
 
 def print_warning(message):
-    """Print a warning message."""
-    print(f"\033[1;33m! {message}\033[0m")
+    """
+    Print a warning message with exclamation.
+    
+    Why: Rich ensures warning colors are visible across different terminal themes
+    Result: Attention-grabbing warning messages with consistent styling
+    """
+    console.print(f"[bold yellow]! {message}[/bold yellow]")
 
 def print_error(message):
-    """Print an error message."""
-    print(f"\033[1;31m✗ {message}\033[0m")
+    """
+    Print an error message with X mark.
+    
+    Why: Rich provides better error formatting and color consistency
+    Result: Clear error messages that stand out with proper red coloring
+    """
+    console.print(f"[bold red]✗ {message}[/bold red]")
 
 def get_user_confirmation(prompt="Continue?", default="y"):
-    """Get user confirmation with a formatted prompt."""
-    valid_responses = {"y": True, "n": False}
-    default_display = default.upper() if default.lower() in valid_responses else "Y/N"
-    options = "[Y/n]" if default.lower() == "y" else "[y/N]" if default.lower() == "n" else "[Y/N]"
+    """
+    Get user confirmation with Rich prompt.
     
-    while True:
-        response = input(f"\033[1;35m{prompt} {options}\033[0m ").lower() or default.lower()
-        if response in valid_responses:
-            return valid_responses[response]
-        print_warning("Please answer with 'y' or 'n'")
+    Why: Rich Confirm provides better UX with proper formatting and validation
+    Result: Professional-looking prompts with built-in validation and styling
+    """
+    return Confirm.ask(prompt, default=(default.lower() == "y"))
 
 def perform_full_gtd_review(config: dict, review_state: Dict[str, str]) -> None:
     """
     Perform a full GTD-style review process, guiding the user through each step.
     """
-    print("\n\033[1;36m╔════════════════════════════════════════╗")
-    print("║           FULL GTD REVIEW             ║")
-    print("╚════════════════════════════════════════╝\033[0m\n")
+    console.print()
+    console.print(Panel(
+        "[bold white]FULL GTD REVIEW[/bold white]", 
+        style="bold cyan",
+        padding=(1, 2)
+    ))
+    console.print()
     
     print_info("This process will guide you through a complete GTD review.")
     print_info("You can quit at any time by pressing Ctrl+C.")
-    print()
+    console.print()
     
     if not get_user_confirmation("Ready to begin the review?"):
         print_info("Review cancelled. No changes were made.")
@@ -234,50 +276,50 @@ def perform_full_gtd_review(config: dict, review_state: Dict[str, str]) -> None:
     
     # Step 1: Collect loose papers and materials
     print_step_header(1, "COLLECT LOOSE PAPERS AND MATERIALS")
-    print("Gather all physical items, notes, and digital information that needs processing.")
-    print("This includes papers, receipts, business cards, and any other items in your physical inbox.")
+    console.print("Gather all physical items, notes, and digital information that needs processing.")
+    console.print("This includes papers, receipts, business cards, and any other items in your physical inbox.")
     if not get_user_confirmation("Have you gathered all physical items?"):
         print_warning("Take some time to collect everything before continuing.")
-        input("Press Enter when ready...")
+        console.input("[bold magenta]Press Enter when ready...[/bold magenta]")
     
     # Step 2: Process all inbox items
     print_step_header(2, "PROCESS ALL INBOX ITEMS")
     print_info("Opening Things inbox...")
     webbrowser.open("things:///show?id=inbox")
-    print("Process each item in your inbox according to the GTD workflow:")
-    print(" • If it takes less than 2 minutes, do it now")
-    print(" • Delegate what you can")
-    print(" • Defer actionable items as tasks")
-    print(" • File reference materials")
-    print(" • Trash what's not needed")
-    input("\033[1;35mPress Enter when you've processed your inbox...\033[0m ")
+    console.print("Process each item in your inbox according to the GTD workflow:")
+    console.print(" • If it takes less than 2 minutes, do it now")
+    console.print(" • Delegate what you can")
+    console.print(" • Defer actionable items as tasks")
+    console.print(" • File reference materials")
+    console.print(" • Trash what's not needed")
+    console.input("[bold magenta]Press Enter when you've processed your inbox...[/bold magenta]")
     
     # Step 3: Review previous calendar data
     print_step_header(3, "REVIEW PREVIOUS CALENDAR DATA")
-    print("Look at your calendar for the past week:")
-    print(" • Capture any missed actions or follow-ups")
-    print(" • Note any lessons learned from meetings or events")
-    print(" • Transfer any relevant information to your system")
-    input("\033[1;35mPress Enter when you've reviewed your past calendar...\033[0m ")
+    console.print("Look at your calendar for the past week:")
+    console.print(" • Capture any missed actions or follow-ups")
+    console.print(" • Note any lessons learned from meetings or events")
+    console.print(" • Transfer any relevant information to your system")
+    console.input("[bold magenta]Press Enter when you've reviewed your past calendar...[/bold magenta]")
     
     # Step 4: Review upcoming calendar
     print_step_header(4, "REVIEW UPCOMING CALENDAR")
-    print("Look at your calendar for the next two weeks:")
-    print(" • Identify any preparation tasks needed for upcoming events")
-    print(" • Block time for important work")
-    print(" • Ensure you're prepared for all commitments")
-    input("\033[1;35mPress Enter when you've reviewed your upcoming calendar...\033[0m ")
+    console.print("Look at your calendar for the next two weeks:")
+    console.print(" • Identify any preparation tasks needed for upcoming events")
+    console.print(" • Block time for important work")
+    console.print(" • Ensure you're prepared for all commitments")
+    console.input("[bold magenta]Press Enter when you've reviewed your upcoming calendar...[/bold magenta]")
     
     # Step 5: Review waiting for list
     print_step_header(5, "REVIEW WAITING FOR LIST")
     waiting_tag = config.get('gtd_review', {}).get('waiting_for_tag', 'waiting for')
     print_info(f"Opening Things '{waiting_tag}' tag...")
     webbrowser.open(f"things:///show?query={urllib.parse.quote(waiting_tag)}")
-    print("Review items you're waiting on others for:")
-    print(" • Follow up on any items that are taking too long")
-    print(" • Update status of items as needed")
-    print(" • Remove completed items")
-    input("\033[1;35mPress Enter when you've reviewed your waiting for items...\033[0m ")
+    console.print("Review items you're waiting on others for:")
+    console.print(" • Follow up on any items that are taking too long")
+    console.print(" • Update status of items as needed")
+    console.print(" • Remove completed items")
+    console.input("[bold magenta]Press Enter when you've reviewed your waiting for items...[/bold magenta]")
     
     # Step 6: Review project lists
     print_step_header(6, "REVIEW PROJECT LISTS")
@@ -299,22 +341,24 @@ def perform_full_gtd_review(config: dict, review_state: Dict[str, str]) -> None:
             print_info(f"Found {len(projects)} projects to review")
             
             for idx, project in enumerate(projects, start=1):
-                print(f"\n\033[1m{idx}/{len(projects)}: {project['title']}\033[0m")
+                console.print(f"\n[bold]{idx}/{len(projects)}: {project['title']}[/bold]")
                 print_info("Opening project in Things...")
                 webbrowser.open(f"things:///show?id={project['uuid']}")
                 
-                print("For each project, ensure:")
-                print(" • The project has a clear outcome/goal")
-                print(" • There's at least one next action")
-                print(" • All tasks are up to date")
+                console.print("For each project, ensure:")
+                console.print(" • The project has a clear outcome/goal")
+                console.print(" • There's at least one next action")
+                console.print(" • All tasks are up to date")
+                console.print()
                 
-                print("\033[1;35mActions:\033[0m")
-                print(" \033[1;32m[d]\033[0m - Mark as done/reviewed")
-                print(" \033[1;33m[n]\033[0m - Next project (without marking as reviewed)")
-                print(" \033[1;33m[s]\033[0m - Skip this project for now")
-                print(" \033[1;31m[q]\033[0m - Quit project review")
+                console.print("[bold magenta]Actions:[/bold magenta]")
+                console.print(" [bold green][d][/bold green] - Mark as done/reviewed")
+                console.print(" [bold yellow][n][/bold yellow] - Next project (without marking as reviewed)")
+                console.print(" [bold yellow][s][/bold yellow] - Skip this project for now")
+                console.print(" [bold red][q][/bold red] - Quit project review")
+                console.print()
                 
-                action = input("\033[1;35mYour choice [d/n/s/q]:\033[0m ").lower()
+                action = console.input("[bold magenta]Your choice [d/n/s/q]: [/bold magenta]").lower()
                 if action == 'q':
                     print_warning("Quitting project review")
                     break
@@ -340,51 +384,55 @@ def perform_full_gtd_review(config: dict, review_state: Dict[str, str]) -> None:
     
     # Step 7: Review Goals and Objectives
     print_step_header(7, "REVIEW GOALS AND OBJECTIVES")
-    print("Take time to review your goals and objectives:")
-    print(" • Are your projects aligned with your goals?")
-    print(" • Do you need to adjust any goals?")
-    print(" • Are there new projects needed to achieve your goals?")
-    input("\033[1;35mPress Enter when you've reviewed your goals...\033[0m ")
+    console.print("Take time to review your goals and objectives:")
+    console.print(" • Are your projects aligned with your goals?")
+    console.print(" • Do you need to adjust any goals?")
+    console.print(" • Are there new projects needed to achieve your goals?")
+    console.input("[bold magenta]Press Enter when you've reviewed your goals...[/bold magenta]")
     
     # Step 8: Review Areas of Focus/Responsibility
     print_step_header(8, "REVIEW AREAS OF FOCUS/RESPONSIBILITY")
     print_info("Opening Things areas view...")
     webbrowser.open("things:///show?id=areas")
-    print("Review your areas of responsibility:")
-    print(" • Are all areas of your life and work represented?")
-    print(" • Are there projects needed in any neglected areas?")
-    print(" • Should any areas be added or removed?")
-    input("\033[1;35mPress Enter when you've reviewed your areas of responsibility...\033[0m ")
+    console.print("Review your areas of responsibility:")
+    console.print(" • Are all areas of your life and work represented?")
+    console.print(" • Are there projects needed in any neglected areas?")
+    console.print(" • Should any areas be added or removed?")
+    console.input("[bold magenta]Press Enter when you've reviewed your areas of responsibility...[/bold magenta]")
     
     # Step 9: Review Someday/Maybe list
     print_step_header(9, "REVIEW SOMEDAY/MAYBE LIST")
     someday_tag = config.get('gtd_review', {}).get('someday_tag', 'someday')
     print_info(f"Opening Things '{someday_tag}' tag...")
     webbrowser.open(f"things:///show?query={urllib.parse.quote(someday_tag)}")
-    print("Review your someday/maybe items:")
-    print(" • Are there items you want to activate now?")
-    print(" • Are there items you can delete?")
-    print(" • Are there new someday/maybe items to add?")
-    input("\033[1;35mPress Enter when you've reviewed your someday/maybe items...\033[0m ")
+    console.print("Review your someday/maybe items:")
+    console.print(" • Are there items you want to activate now?")
+    console.print(" • Are there items you can delete?")
+    console.print(" • Are there new someday/maybe items to add?")
+    console.input("[bold magenta]Press Enter when you've reviewed your someday/maybe items...[/bold magenta]")
     
     # Step 10: Be creative and courageous
     print_step_header(10, "BE CREATIVE AND COURAGEOUS")
-    print("Take some time to think about new ideas or projects:")
-    print(" • What new initiatives would you like to start?")
-    print(" • Are there any bold moves you should make?")
-    print(" • What would make the biggest positive difference in your life or work?")
-    input("\033[1;35mPress Enter when you're done with your creative thinking...\033[0m ")
+    console.print("Take some time to think about new ideas or projects:")
+    console.print(" • What new initiatives would you like to start?")
+    console.print(" • Are there any bold moves you should make?")
+    console.print(" • What would make the biggest positive difference in your life or work?")
+    console.input("[bold magenta]Press Enter when you're done with your creative thinking...[/bold magenta]")
     
-    print("\n\033[1;32m╔════════════════════════════════════════╗")
-    print("║       FULL GTD REVIEW COMPLETED       ║")
-    print("╚════════════════════════════════════════╝\033[0m\n")
+    console.print()
+    console.print(Panel(
+        "[bold white]FULL GTD REVIEW COMPLETED[/bold white]", 
+        style="bold green",
+        padding=(1, 2)
+    ))
+    console.print()
     
     print_info("Saving review state...")
     save_review_state(review_state)
     print_success("Review state saved successfully!")
     
-    print("\nNext scheduled review: " + 
-          (datetime.now() + datetime.timedelta(days=config.get('gtd_review', {}).get('review_frequency_days', 7))).strftime("%A, %B %d"))
+    next_review = datetime.now() + datetime.timedelta(days=config.get('gtd_review', {}).get('review_frequency_days', 7))
+    console.print(f"\nNext scheduled review: [bold]{next_review.strftime('%A, %B %d')}[/bold]")
 
 @click.command()
 @click.argument('area', default='full', callback=validate_area_choice)
@@ -399,17 +447,23 @@ def main(area: str, number: Optional[int], full: bool) -> None:
     Why: Converted from argparse to Click for better CLI UX and modern Python practices
     Result: Same functionality with improved user experience and error messages
     """
-    # Set up colorful logging
+    # Set up colorful logging with Rich
+    from rich.logging import RichHandler
     logging.basicConfig(
         level=logging.ERROR,
-        format="\033[1;31m%(levelname)s: %(message)s\033[0m"
+        format="%(message)s",
+        handlers=[RichHandler(rich_tracebacks=True)]
     )
     
     try:
-        # Display welcome banner
-        print("\n\033[1;36m╔════════════════════════════════════════╗")
-        print("║           THINGS GTD REVIEW TOOL        ║")
-        print("╚════════════════════════════════════════╝\033[0m\n")
+        # Display welcome banner with Rich
+        console.print()
+        console.print(Panel(
+            "[bold white]THINGS GTD REVIEW TOOL[/bold white]", 
+            style="bold cyan",
+            padding=(1, 2)
+        ))
+        console.print()
         
         config = load_config()
         review_state = load_review_state()
@@ -485,7 +539,7 @@ def main(area: str, number: Optional[int], full: bool) -> None:
     print_info("By default, all projects are marked as reviewed.")
     
     # Display projects in a more readable format
-    print("\nIncluded projects:")
+    console.print("\nIncluded projects:")
     for idx, project in enumerate(projects_with_notes, start=1):
         last_reviewed = old_states[project['uuid']]
         last_reviewed_str = ""
@@ -495,10 +549,11 @@ def main(area: str, number: Optional[int], full: bool) -> None:
                 last_reviewed_str = f" (Last reviewed: {last_date.strftime('%Y-%m-%d')})"
             except ValueError:
                 pass
-        print(f"  \033[1m{idx}.\033[0m {project['title']}{last_reviewed_str}")
+        console.print(f"  [bold]{idx}.[/bold] {project['title']}{last_reviewed_str}")
     
-    print("\n\033[1;35mIf any projects were NOT actually reviewed, please enter their numbers.\033[0m")
-    not_reviewed_input = input("Enter numbers separated by comma (e.g. 1,3,4) or press Enter if all were reviewed: ")
+    console.print()
+    console.print("[bold magenta]If any projects were NOT actually reviewed, please enter their numbers.[/bold magenta]")
+    not_reviewed_input = console.input("Enter numbers separated by comma (e.g. 1,3,4) or press Enter if all were reviewed: ")
     
     if not_reviewed_input.strip():
         try:
@@ -528,7 +583,7 @@ def main(area: str, number: Optional[int], full: bool) -> None:
     
     # Show next scheduled review date
     next_review = datetime.now() + datetime.timedelta(days=config.get('gtd_review', {}).get('review_frequency_days', 7))
-    print(f"\nNext scheduled review: \033[1m{next_review.strftime('%A, %B %d')}\033[0m")
+    console.print(f"\nNext scheduled review: [bold]{next_review.strftime('%A, %B %d')}[/bold]")
 
 if __name__ == "__main__":
     main()
