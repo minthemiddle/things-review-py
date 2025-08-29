@@ -5,9 +5,13 @@
             "search_tag": "🛠 Work",
             "save_area": "YourWorkAreaID"
         },
-        "private": {
-            "search_tag": "💪 Private",
-            "save_area": "YourPrivateAreaID"
+        "personal": {
+            "search_tag": "💪 Personal", 
+            "save_area": "YourPersonalAreaID"
+        },
+        "clients": {
+            "area_ids": ["ClientArea1ID", "ClientArea2ID"],
+            "save_area": "ClientReviewAreaID"
         }
     },
     "gtd_review": {

@@ -41,7 +41,7 @@ No virtual environment setup needed - uv handles Python version and dependencies
 ### 3. Configure the Application
 1. Copy the example configuration file:
 ```bash
-cp config.json.example config.json
+cp config.example config.json
 ```
 
 2. Configure your reviews:
@@ -142,18 +142,13 @@ uv run review.py --help
             "search_tag": "🛠 Work",
             "save_area": "YourWorkAreaID"
         },
-        "private": {
-            "search_tag": "💪 Private",
-            "save_area": "YourPrivateAreaID"
+        "personal": {
+            "search_tag": "💪 Personal",
+            "save_area": "YourPersonalAreaID"
         },
         "clients": {
-            "search_tag": "",
             "area_ids": ["ClientArea1ID", "ClientArea2ID"],
             "save_area": "ClientReviewAreaID"
-        },
-        "specific-areas": {
-            "area_ids": ["SpecificAreaID1", "SpecificAreaID2"],
-            "save_area": "SpecificAreasReviewID"
         }
     },
     "gtd_review": {
@@ -210,7 +205,8 @@ uv run tests/test_review.py
 ### Code Structure
 - `review.py` - Main script with modernized architecture
 - `tests/test_review.py` - Comprehensive test suite with 24 test cases
-- `config.json` - Configuration file (copy from config.json.example)
+- `config.example` - Example configuration showing both tag-based and direct area modes
+- `config.json` - Your configuration file (copy from config.example)
 
 ### Contributing
 The codebase follows modern Python standards:
