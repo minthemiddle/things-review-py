@@ -8,7 +8,7 @@ Built with Python 3.13+, featuring a rich terminal interface and comprehensive w
 - **Full GTD reviews** - Comprehensive step-by-step GTD workflow review
 - **Rich terminal interface** - Beautiful, colorful output with progress indicators
 - **Modern Python** - PEP 723 compliance, type hints, and class-based architecture
-- **Comprehensive testing** - 21 test cases ensuring reliability
+- **Comprehensive testing** - 24 test cases ensuring reliability
 
 ## Quick Start
 
@@ -197,19 +197,19 @@ This tool has been fully modernized to use current Python best practices:
 - **Class-based architecture** - Object-oriented design with `ReviewState`, `ProjectInfo` classes
 - **Rich terminal interface** - Professional CLI experience
 - **Click framework** - Modern command-line argument parsing
-- **Comprehensive testing** - 21 test cases with 100% functionality coverage
+- **Comprehensive testing** - 24 test cases with 100% functionality coverage
 - **Detailed documentation** - Extensive docstrings with Args/Returns/Raises sections
 
 ### Testing
 Run the test suite to verify functionality:
 
 ```bash
-uv run test_review.py
+uv run tests/test_review.py
 ```
 
 ### Code Structure
 - `review.py` - Main script with modernized architecture
-- `test_review.py` - Comprehensive test suite
+- `tests/test_review.py` - Comprehensive test suite with 24 test cases
 - `config.json` - Configuration file (copy from config.json.example)
 
 ### Contributing

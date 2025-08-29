@@ -2,3 +2,5 @@
 .aider*
 venv
 context
+.pytest_cache
+__pycache__

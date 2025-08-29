@@ -3,9 +3,11 @@
 # requires-python = ">=3.13"
 # dependencies = [
 #     "pytest",
-#     "pytest-mock",
+#     "pytest-mock", 
 #     "click",
 #     "rich",
+#     "python-dotenv",
+#     "things.py",
 # ]
 # ///
 
@@ -31,6 +33,9 @@ import tempfile
 import sys
 from datetime import datetime
 from unittest.mock import patch, mock_open, MagicMock
+
+# Add parent directory to path so we can import review module
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 # Mock the things module before importing review
 sys.modules['things'] = MagicMock()
