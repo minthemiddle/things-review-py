@@ -39,7 +39,7 @@ from review import (
     load_review_state, save_review_state, load_config, validate_area_choice,
     fetch_areas, process_projects, generate_review_payload,
     ConfigError, MissingConfigError, InvalidConfigError, 
-    AreaNotFoundError, ThingsAPIError, main
+    AreaNotFoundError, ThingsAPIError, main, ReviewState
 )
 
 
@@ -143,8 +143,15 @@ class TestProjectProcessing:
     def test_process_projects_empty_areas(self):
         """What: Test processing when no areas provided
         Result: Should return empty list"""
-        result = process_projects([], None, {})
-        assert result == []
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+            json.dump({}, f)
+            f.flush()
+            
+            review_state = ReviewState(f.name)
+            result = process_projects([], None, review_state)
+            assert result == []
+            
+            os.unlink(f.name)
     
     def test_process_projects_sorting_by_last_reviewed(self):
         """What: Test that projects are sorted by last reviewed date
@@ -156,17 +163,23 @@ class TestProjectProcessing:
             ]
         }]
         
-        # Project B was reviewed more recently than Project A
-        review_state = {
-            'uuid-a': '2024-01-01T10:00:00',
-            'uuid-b': '2024-01-02T10:00:00'
-        }
-        
-        result = process_projects(areas, None, review_state)
-        
-        # Project A should come first (older review)
-        assert result[0]['title'] == 'Project A'
-        assert result[1]['title'] == 'Project B'
+        # Create ReviewState and set up review dates
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+            state_data = {
+                'uuid-a': '2024-01-01T10:00:00',
+                'uuid-b': '2024-01-02T10:00:00'
+            }
+            json.dump(state_data, f)
+            f.flush()
+            
+            review_state = ReviewState(f.name)
+            result = process_projects(areas, None, review_state)
+            
+            # Project A should come first (older review)
+            assert result[0]['title'] == 'Project A'
+            assert result[1]['title'] == 'Project B'
+            
+            os.unlink(f.name)
     
     def test_process_projects_with_limit(self):
         """What: Test limiting number of projects returned
@@ -178,8 +191,15 @@ class TestProjectProcessing:
             ]
         }]
         
-        result = process_projects(areas, 2, {})
-        assert len(result) == 2
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+            json.dump({}, f)
+            f.flush()
+            
+            review_state = ReviewState(f.name)
+            result = process_projects(areas, 2, review_state)
+            assert len(result) == 2
+            
+            os.unlink(f.name)
     
     def test_process_projects_never_reviewed_comes_first(self):
         """What: Test that never-reviewed projects come before reviewed ones
@@ -191,10 +211,16 @@ class TestProjectProcessing:
             ]
         }]
         
-        review_state = {'reviewed-uuid': '2024-01-01T10:00:00'}
-        
-        result = process_projects(areas, None, review_state)
-        assert result[0]['title'] == 'Never Reviewed'
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+            state_data = {'reviewed-uuid': '2024-01-01T10:00:00'}
+            json.dump(state_data, f)
+            f.flush()
+            
+            review_state = ReviewState(f.name)
+            result = process_projects(areas, None, review_state)
+            assert result[0]['title'] == 'Never Reviewed'
+            
+            os.unlink(f.name)
 
 
 class TestThingsAPIIntegration:

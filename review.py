@@ -12,24 +12,97 @@ import things
 import click
 import urllib.parse
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 import subprocess
 import sys
 import os
 import logging
 import webbrowser
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Protocol
+from dataclasses import dataclass
+from pathlib import Path
 
 from rich.console import Console
 from rich.panel import Panel
 from rich.prompt import Confirm
 from rich.text import Text
 from rich import print as rich_print
+from rich.logging import RichHandler
 
 STATE_FILE = "review_state.json"
 
 # Initialize Rich console for better terminal output
 console = Console()
+
+
+@dataclass
+class ProjectInfo:
+    """
+    Data class representing a project for review.
+    
+    Why: Type safety and structured data instead of loose dictionaries
+    Result: Better IDE support, validation, and cleaner code
+    """
+    title: str
+    uuid: str
+    deadline: Optional[datetime] = None
+    last_reviewed: Optional[datetime] = None
+
+
+class ReviewState:
+    """
+    Manages loading and saving of review state data.
+    
+    Why: Encapsulates file I/O logic and provides a clean interface for state management
+    Result: Centralized state handling with error handling and validation
+    """
+    
+    def __init__(self, state_file: str = STATE_FILE):
+        self.state_file = Path(state_file)
+        self._state: Dict[str, str] = {}
+        self.load()
+    
+    def load(self) -> None:
+        """Load review state from file with proper error handling."""
+        if not self.state_file.exists():
+            self._state = {}
+            return
+            
+        try:
+            with open(self.state_file, "r") as f:
+                self._state = json.load(f)
+        except (json.JSONDecodeError, IOError):
+            self._state = {}
+    
+    def save(self) -> None:
+        """Save current state to file with error handling."""
+        try:
+            with open(self.state_file, "w") as f:
+                json.dump(self._state, f, indent=2)
+        except IOError as e:
+            console.print(f"[red]Error saving state file: {e}[/red]")
+            raise
+    
+    def get_last_reviewed(self, project_uuid: str) -> Optional[datetime]:
+        """Get last reviewed timestamp for a project."""
+        timestamp_str = self._state.get(project_uuid)
+        if not timestamp_str:
+            return None
+            
+        try:
+            return datetime.fromisoformat(timestamp_str)
+        except ValueError:
+            return None
+    
+    def mark_reviewed(self, project_uuid: str, timestamp: Optional[datetime] = None) -> None:
+        """Mark a project as reviewed at given timestamp."""
+        if timestamp is None:
+            timestamp = datetime.now()
+        self._state[project_uuid] = timestamp.isoformat()
+    
+    def unmark_reviewed(self, project_uuid: str) -> None:
+        """Remove review timestamp for a project."""
+        self._state.pop(project_uuid, None)
 
 def load_review_state(state_file: str = STATE_FILE) -> Dict[str, str]:
     """
@@ -124,7 +197,7 @@ def fetch_areas(search_tag: str) -> list:
     except Exception as e:
         raise ThingsAPIError(f"Error communicating with Things API: {str(e)}")
 
-def process_projects(areas: list, limit: Optional[int], review_state: Dict[str, str]) -> List[Dict[str, str]]:
+def process_projects(areas: list, limit: Optional[int], review_state: ReviewState) -> List[Dict[str, str]]:
     """
     Process projects from areas, sorting by when they were last reviewed and deadline.
     Projects that have not been reviewed recently come first.
@@ -140,13 +213,8 @@ def process_projects(areas: list, limit: Optional[int], review_state: Dict[str, 
                     deadline_parsed = None
             else:
                 deadline_parsed = None
-            last_review_str = review_state.get(project['uuid'])
-            if last_review_str:
-                try:
-                    last_reviewed = datetime.fromisoformat(last_review_str)
-                except ValueError:
-                    last_reviewed = datetime.min
-            else:
+            last_reviewed = review_state.get_last_reviewed(project['uuid'])
+            if last_reviewed is None:
                 last_reviewed = datetime.min
             all_projects.append({
                 'title': project['title'],
@@ -254,7 +322,7 @@ def get_user_confirmation(prompt="Continue?", default="y"):
     """
     return Confirm.ask(prompt, default=(default.lower() == "y"))
 
-def perform_full_gtd_review(config: dict, review_state: Dict[str, str]) -> None:
+def perform_full_gtd_review(config: dict, review_state: ReviewState) -> None:
     """
     Perform a full GTD-style review process, guiding the user through each step.
     """
@@ -363,7 +431,7 @@ def perform_full_gtd_review(config: dict, review_state: Dict[str, str]) -> None:
                     print_warning("Quitting project review")
                     break
                 elif action == 'd':
-                    review_state[project['uuid']] = datetime.now().isoformat()
+                    review_state.mark_reviewed(project['uuid'])
                     reviewed_projects += 1
                     print_success(f"Marked '{project['title']}' as reviewed")
                 elif action == 's':
@@ -428,7 +496,7 @@ def perform_full_gtd_review(config: dict, review_state: Dict[str, str]) -> None:
     console.print()
     
     print_info("Saving review state...")
-    save_review_state(review_state)
+    review_state.save()
     print_success("Review state saved successfully!")
     
     next_review = datetime.now() + datetime.timedelta(days=config.get('gtd_review', {}).get('review_frequency_days', 7))
@@ -466,7 +534,7 @@ def main(area: str, number: Optional[int], full: bool) -> None:
         console.print()
         
         config = load_config()
-        review_state = load_review_state()
+        review_state = ReviewState()
         
         # Handle full GTD review
         if full or area == "full":
@@ -528,11 +596,11 @@ def main(area: str, number: Optional[int], full: bool) -> None:
     webbrowser.open(things_url)
     
     # Update review state
-    current_iso = datetime.now().isoformat()
+    current_time = datetime.now()
     old_states = {}
     for project in projects_with_notes:
-        old_states[project['uuid']] = review_state.get(project['uuid'])
-        review_state[project['uuid']] = current_iso
+        old_states[project['uuid']] = review_state.get_last_reviewed(project['uuid'])
+        review_state.mark_reviewed(project['uuid'], current_time)
 
     print_section_header("REVIEW COMPLETION")
     print_success("Review project created in Things!")
@@ -565,10 +633,9 @@ def main(area: str, number: Optional[int], full: bool) -> None:
                     project = projects_with_notes[index - 1]
                     skipped_projects.append(project['title'])
                     if old_states[project['uuid']] is not None:
-                        review_state[project['uuid']] = old_states[project['uuid']]
+                        review_state.mark_reviewed(project['uuid'], old_states[project['uuid']])
                     else:
-                        if project['uuid'] in review_state:
-                            del review_state[project['uuid']]
+                        review_state.unmark_reviewed(project['uuid'])
             
             if skipped_projects:
                 print_info(f"Marked {len(skipped_projects)} projects as not reviewed:")
@@ -578,7 +645,7 @@ def main(area: str, number: Optional[int], full: bool) -> None:
             print_warning("Invalid input, all projects will remain marked as reviewed.")
     
     # Save the updated review state
-    save_review_state(review_state)
+    review_state.save()
     print_success("Review state saved successfully!")
     
     # Show next scheduled review date
